@@ -1,34 +1,48 @@
-pub const Token = union(enum) {
-    illegal: void,
-    eof: void,
+pub const TokenData = union(enum) {
+    // Meta
+    illegal,
 
+    // Identifiers, literals
     identifier: []const u8,
     integer: []const u8,
 
-    assign: void,
-    bang: void,
-    plus: void,
-    minus: void,
-    asterisk: void,
-    slash: void,
+    // Operators
+    assign,
+    plus,
+    minus,
+    asterisk,
+    slash,
+    bang,
 
-    equal: void,
-    not_equal: void,
-    less_than: void,
-    greater_than: void,
+    less_than,
+    greater_than,
 
-    comma: void,
-    semicolon: void,
-    paren_l: void,
-    paren_r: void,
-    curly_l: void,
-    curly_r: void,
+    // Delimiters
+    comma,
+    semicolon,
 
-    function: void,
-    let: void,
-    true: void,
-    false: void,
-    if_: void,
-    else_: void,
-    return_: void,
+    paren_l,
+    paren_r,
+    curly_l,
+    curly_r,
+
+    // Keywords
+    let,
+    function,
+    true_,
+    false_,
+    if_,
+    else_,
+    return_,
+};
+
+pub const Location = struct {
+    row: u32,
+    column: u32,
+};
+
+pub const Token = struct {
+    data: TokenData,
+    location: Location,
+    length: u32,
 };

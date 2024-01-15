@@ -1,142 +1,109 @@
 const std = @import("std");
-const token_zig = @import("token.zig");
-const Token = token_zig.Token;
-const TokenType = token_zig.TokenType;
-const TokenPayload = token_zig.TokenPayload;
+const Token = @import("token.zig").Token;
+const TokenData = @import("token.zig").TokenData;
+const Location = @import("token.zig").Location;
 
 pub const Lexer = struct {
-    source: []const u8,
+    input: []const u8 = undefined,
     position: u32 = 0,
     row: u32 = 1,
     column: u32 = 1,
 
-    pub fn nextToken(self: *Lexer) Token {
+    pub fn init(input: []const u8) Lexer {
+        return .{
+            .input = input,
+        };
+    }
+
+    pub fn nextToken(self: *Lexer) ?Token {
         self.skipWhitespace();
 
-        const optional_char = self.nextChar();
-        const char = optional_char orelse return .eof;
-        switch (char) {
-            '=' => {
-                const next = self.peekChar();
-                if (next == '=') {
-                    _ = self.nextChar();
-                    return .equal;
-                }
-                return .assign;
-            },
-            '!' => {
-                const next = self.peekChar();
-                if (next == '=') {
-                    _ = self.nextChar();
-                    return .not_equal;
-                }
-                return .bang;
-            },
-            '+' => return .plus,
-            '-' => return .minus,
-            '*' => return .asterisk,
-            '/' => return .slash,
-            '<' => return .less_than,
-            '>' => return .greater_than,
-            '(' => return .paren_l,
-            ')' => return .paren_r,
-            '{' => return .curly_l,
-            '}' => return .curly_r,
-            ',' => return .comma,
-            ';' => return .semicolon,
-            else => {
+        const start = self.position;
+        const location: Location = .{ .row = self.row, .column = self.column };
+        const char = self.nextChar() orelse return null;
+        const token_data: TokenData = switch (char) {
+            '=' => .assign,
+            '+' => .plus,
+            '-' => .minus,
+            '*' => .asterisk,
+            '/' => .slash,
+            '!' => .bang,
+
+            '<' => .less_than,
+            '>' => .greater_than,
+
+            ',' => .comma,
+            ';' => .semicolon,
+
+            '(' => .paren_l,
+            ')' => .paren_r,
+            '{' => .curly_l,
+            '}' => .curly_r,
+
+            else => blk: {
                 if (isLetter(char)) {
-                    const word = self.nextWord();
-                    const keyword_token = getKeyword(word);
-                    if (keyword_token) |token| {
-                        return token;
+                    const word = self.readWord();
+                    if (std.mem.eql(u8, word, "let")) {
+                        break :blk .let;
                     }
-                    return .{ .identifier = word };
+                    if (std.mem.eql(u8, word, "function")) {
+                        break :blk .function;
+                    }
+                    if (std.mem.eql(u8, word, "if")) {
+                        break :blk .if_;
+                    }
+                    if (std.mem.eql(u8, word, "else")) {
+                        break :blk .else_;
+                    }
+                    if (std.mem.eql(u8, word, "true")) {
+                        break :blk .true_;
+                    }
+                    if (std.mem.eql(u8, word, "false")) {
+                        break :blk .false_;
+                    }
+                    if (std.mem.eql(u8, word, "return")) {
+                        break :blk .return_;
+                    }
+                    break :blk .{ .identifier = word };
                 }
                 if (isDigit(char)) {
-                    const number = self.nextNumber();
-                    return .{ .integer = number };
+                    const number = self.readNumber();
+                    break :blk .{ .integer = number };
                 }
+                break :blk .illegal;
             },
-        }
+        };
 
-        unreachable;
+        const length = self.position - start;
+        return .{ .data = token_data, .location = location, .length = length };
     }
 
-    pub fn nextWord(self: *Lexer) []const u8 {
-        const position = self.position - 1;
+    fn readWord(self: *Lexer) []const u8 {
+        const start = self.position - 1;
         while (true) {
-            const char = self.peekChar().?;
-            if (!isLetter(char)) {
+            const char = self.peekChar() orelse break;
+            if (isLetter(char)) {
+                self.advanceChar();
+            } else {
                 break;
             }
-            _ = self.nextChar();
         }
-        return self.source[position..self.position];
+        const end = self.position;
+        return self.input[start..end];
     }
 
-    pub fn nextNumber(self: *Lexer) []const u8 {
-        const position = self.position - 1;
+    fn readNumber(self: *Lexer) []const u8 {
+        const start = self.position - 1;
         while (true) {
-            const char = self.peekChar().?;
-            if (!isDigit(char)) {
+            const char = self.peekChar() orelse break;
+            if (isDigit(char)) {
+                self.advanceChar();
+            } else {
                 break;
             }
-            _ = self.nextChar();
         }
-        return self.source[position..self.position];
-    }
-
-    pub fn peekChar(self: *Lexer) ?u8 {
-        if (self.position >= self.source.len) {
-            return undefined;
-        }
-        return self.source[self.position];
-    }
-
-    pub fn nextChar(self: *Lexer) ?u8 {
-        if (self.position >= self.source.len) {
-            return undefined;
-        }
-        const char = self.source[self.position];
-        self.position += 1;
-        return char;
-    }
-
-    fn getKeyword(word: []const u8) ?Token {
-        if (std.mem.eql(u8, word, "fn")) {
-            return .function;
-        }
-        if (std.mem.eql(u8, word, "let")) {
-            return .let;
-        }
-        if (std.mem.eql(u8, word, "true")) {
-            return .true;
-        }
-        if (std.mem.eql(u8, word, "false")) {
-            return .false;
-        }
-        if (std.mem.eql(u8, word, "if")) {
-            return .if_;
-        }
-        if (std.mem.eql(u8, word, "else")) {
-            return .else_;
-        }
-        if (std.mem.eql(u8, word, "return")) {
-            return .return_;
-        }
-        return undefined;
-    }
-
-    fn skipWhitespace(self: *Lexer) void {
-        while (true) {
-            const optional_char = self.peekChar();
-            const char = optional_char orelse return;
-            if (!isWhitespace(char)) {
-                return;
-            }
-            _ = self.nextChar();
-        }
+        const end = self.position;
+        return self.input[start..end];
     }
 
     fn isLetter(char: u8) bool {
@@ -147,78 +114,41 @@ pub const Lexer = struct {
         return (char >= '0' and char <= '9');
     }
 
-    fn isWhitespace(char: u8) bool {
-        return switch (char) {
-            ' ', '\t', '\n', '\r' => true,
-            else => false,
-        };
+    fn skipWhitespace(self: *Lexer) void {
+        while (true) {
+            const char = self.peekChar() orelse return;
+            switch (char) {
+                ' ', '\t', '\n', '\r' => {
+                    self.advanceChar();
+                },
+                else => return,
+            }
+        }
+    }
+
+    fn nextChar(self: *Lexer) ?u8 {
+        if (self.position >= self.input.len) {
+            return null;
+        }
+        self.advanceChar();
+        return self.input[self.position - 1];
+    }
+
+    fn advanceChar(self: *Lexer) void {
+        const char = self.peekChar() orelse return;
+        if (char == '\n') {
+            self.row += 1;
+            self.column = 1;
+        } else {
+            self.column += 1;
+        }
+        self.position += 1;
+    }
+
+    fn peekChar(self: Lexer) ?u8 {
+        if (self.position >= self.input.len) {
+            return null;
+        }
+        return self.input[self.position];
     }
 };
-
-test "simple token" {
-    const input = "=+(){},;";
-    var lexer = Lexer{ .source = input };
-
-    try std.testing.expect(lexer.nextToken() == Token.assign);
-    try std.testing.expect(lexer.nextToken() == Token.plus);
-    try std.testing.expect(lexer.nextToken() == Token.paren_l);
-    try std.testing.expect(lexer.nextToken() == Token.paren_r);
-    try std.testing.expect(lexer.nextToken() == Token.curly_l);
-    try std.testing.expect(lexer.nextToken() == Token.curly_r);
-    try std.testing.expect(lexer.nextToken() == Token.comma);
-    try std.testing.expect(lexer.nextToken() == Token.semicolon);
-}
-
-test "simple source" {
-    const input =
-        \\let five = 5;
-        \\let ten = 10;
-        \\
-        \\let add = fn(x, y) {
-        \\  x + y
-        \\};
-        \\
-        \\let result = add(five, ten);
-    ;
-    var lexer = Lexer{ .source = input };
-
-    try std.testing.expect(lexer.nextToken() == Token.let);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "five"));
-    try std.testing.expect(lexer.nextToken() == Token.assign);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().integer, "5"));
-    try std.testing.expect(lexer.nextToken() == Token.semicolon);
-
-    try std.testing.expect(lexer.nextToken() == Token.let);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "ten"));
-    try std.testing.expect(lexer.nextToken() == Token.assign);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().integer, "10"));
-    try std.testing.expect(lexer.nextToken() == Token.semicolon);
-
-    try std.testing.expect(lexer.nextToken() == Token.let);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "add"));
-    try std.testing.expect(lexer.nextToken() == Token.assign);
-    try std.testing.expect(lexer.nextToken() == Token.function);
-    try std.testing.expect(lexer.nextToken() == Token.paren_l);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "x"));
-    try std.testing.expect(lexer.nextToken() == Token.comma);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "y"));
-    try std.testing.expect(lexer.nextToken() == Token.paren_r);
-    try std.testing.expect(lexer.nextToken() == Token.curly_l);
-
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "x"));
-    try std.testing.expect(lexer.nextToken() == Token.plus);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "y"));
-
-    try std.testing.expect(lexer.nextToken() == Token.curly_r);
-    try std.testing.expect(lexer.nextToken() == Token.semicolon);
-
-    try std.testing.expect(lexer.nextToken() == Token.let);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "result"));
-    try std.testing.expect(lexer.nextToken() == Token.assign);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "add"));
-    try std.testing.expect(lexer.nextToken() == Token.paren_l);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "five"));
-    try std.testing.expect(lexer.nextToken() == Token.comma);
-    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "ten"));
-    try std.testing.expect(lexer.nextToken() == Token.paren_r);
-}

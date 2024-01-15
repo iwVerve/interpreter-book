@@ -1,9 +1,19 @@
 const std = @import("std");
-const t = @import("token.zig");
+const Token = @import("token.zig").Token;
 const Lexer = @import("lexer.zig").Lexer;
-const repl = @import("repl.zig");
-const ast = @import("ast.zig");
 
-pub fn main() !void {
-    // try repl.start();
+pub fn main() void {
+    const string =
+        \\let x = 5;
+        \\let y = 10;
+        \\let add = fn(x, y) {
+        \\  x + y;
+        \\};
+        \\let result = add(x, y);
+    ;
+    var lexer = Lexer.init(string);
+    while (true) {
+        const token = lexer.nextToken() orelse return;
+        std.debug.print("{?}\n", .{token});
+    }
 }
