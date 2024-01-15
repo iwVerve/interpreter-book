@@ -154,3 +154,71 @@ pub const Lexer = struct {
         };
     }
 };
+
+test "simple token" {
+    const input = "=+(){},;";
+    var lexer = Lexer{ .source = input };
+
+    try std.testing.expect(lexer.nextToken() == Token.assign);
+    try std.testing.expect(lexer.nextToken() == Token.plus);
+    try std.testing.expect(lexer.nextToken() == Token.paren_l);
+    try std.testing.expect(lexer.nextToken() == Token.paren_r);
+    try std.testing.expect(lexer.nextToken() == Token.curly_l);
+    try std.testing.expect(lexer.nextToken() == Token.curly_r);
+    try std.testing.expect(lexer.nextToken() == Token.comma);
+    try std.testing.expect(lexer.nextToken() == Token.semicolon);
+}
+
+test "simple source" {
+    const input =
+        \\let five = 5;
+        \\let ten = 10;
+        \\
+        \\let add = fn(x, y) {
+        \\  x + y
+        \\};
+        \\
+        \\let result = add(five, ten);
+    ;
+    var lexer = Lexer{ .source = input };
+
+    try std.testing.expect(lexer.nextToken() == Token.let);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "five"));
+    try std.testing.expect(lexer.nextToken() == Token.assign);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().integer, "5"));
+    try std.testing.expect(lexer.nextToken() == Token.semicolon);
+
+    try std.testing.expect(lexer.nextToken() == Token.let);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "ten"));
+    try std.testing.expect(lexer.nextToken() == Token.assign);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().integer, "10"));
+    try std.testing.expect(lexer.nextToken() == Token.semicolon);
+
+    try std.testing.expect(lexer.nextToken() == Token.let);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "add"));
+    try std.testing.expect(lexer.nextToken() == Token.assign);
+    try std.testing.expect(lexer.nextToken() == Token.function);
+    try std.testing.expect(lexer.nextToken() == Token.paren_l);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "x"));
+    try std.testing.expect(lexer.nextToken() == Token.comma);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "y"));
+    try std.testing.expect(lexer.nextToken() == Token.paren_r);
+    try std.testing.expect(lexer.nextToken() == Token.curly_l);
+
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "x"));
+    try std.testing.expect(lexer.nextToken() == Token.plus);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "y"));
+
+    try std.testing.expect(lexer.nextToken() == Token.curly_r);
+    try std.testing.expect(lexer.nextToken() == Token.semicolon);
+
+    try std.testing.expect(lexer.nextToken() == Token.let);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "result"));
+    try std.testing.expect(lexer.nextToken() == Token.assign);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "add"));
+    try std.testing.expect(lexer.nextToken() == Token.paren_l);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "five"));
+    try std.testing.expect(lexer.nextToken() == Token.comma);
+    try std.testing.expect(std.mem.eql(u8, lexer.nextToken().identifier, "ten"));
+    try std.testing.expect(lexer.nextToken() == Token.paren_r);
+}

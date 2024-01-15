@@ -1,13 +1,25 @@
 const std = @import("std");
-const File = std.fs.File;
 const Lexer = @import("lexer.zig").Lexer;
+const Token = @import("token.zig").Token;
 
 pub fn start() !void {
-    const stdin = std.io.getStdIn().reader();
-    const stdout = std.io.getStdOut().writer();
-    var buf: [1024]u8 = undefined;
+    var buffered_reader = std.io.bufferedReader(std.io.getStdIn().reader());
+    const reader = buffered_reader.reader();
+    const writer = std.io.getStdOut().writer();
 
-    if (try stdin.readUntilDelimiterOrEof(buf[0..], '\n')) |input| {
-        try stdout.print("{s}", .{input});
+    while (true) {
+        var buffer: [1024]u8 = undefined;
+        const input = try reader.readUntilDelimiterOrEof(&buffer, '\n') orelse {
+            return;
+        };
+
+        var lexer = Lexer{ .source = input };
+        while (true) {
+            const token = lexer.nextToken();
+            try writer.print("{}\n", .{token});
+            if (token == Token.eof) {
+                break;
+            }
+        }
     }
 }
