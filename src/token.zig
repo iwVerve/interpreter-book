@@ -14,6 +14,8 @@ pub const TokenData = union(enum) {
     slash,
     bang,
 
+    equal,
+    not_equal,
     less_than,
     greater_than,
 

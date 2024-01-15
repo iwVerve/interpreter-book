@@ -4,12 +4,7 @@ const Lexer = @import("lexer.zig").Lexer;
 
 pub fn main() void {
     const string =
-        \\let x = 5;
-        \\let y = 10;
-        \\let add = fn(x, y) {
-        \\  x + y;
-        \\};
-        \\let result = add(x, y);
+        \\if (a == b) {}
     ;
     var lexer = Lexer.init(string);
     while (true) {

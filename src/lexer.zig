@@ -22,12 +22,26 @@ pub const Lexer = struct {
         const location: Location = .{ .row = self.row, .column = self.column };
         const char = self.nextChar() orelse return null;
         const token_data: TokenData = switch (char) {
-            '=' => .assign,
+            '=' => blk: {
+                const next = self.peekChar() orelse break :blk .assign;
+                if (next == '=') {
+                    self.advanceChar();
+                    break :blk .equal;
+                }
+                break :blk .assign;
+            },
             '+' => .plus,
             '-' => .minus,
             '*' => .asterisk,
             '/' => .slash,
-            '!' => .bang,
+            '!' => blk: {
+                const next = self.peekChar() orelse break :blk .bang;
+                if (next == '=') {
+                    self.advanceChar();
+                    break :blk .not_equal;
+                }
+                break :blk .bang;
+            },
 
             '<' => .less_than,
             '>' => .greater_than,
