@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const TokenData = union(enum) {
     // Meta
     illegal,
@@ -36,6 +38,22 @@ pub const TokenData = union(enum) {
     if_,
     else_,
     return_,
+
+    pub fn format(value: TokenData, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        switch (value) {
+            .identifier => {
+                try writer.print("\"{s}\"", .{value.identifier});
+            },
+            .integer => {
+                try writer.print("\"{s}\"", .{value.integer});
+            },
+            else => {
+                try writer.print("{}", .{value});
+            },
+        }
+    }
 };
 
 pub const Location = struct {
@@ -47,4 +65,10 @@ pub const Token = struct {
     data: TokenData,
     location: Location,
     length: u32,
+
+    pub fn format(value: Token, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("<< {?} at {}:{} >>", .{ value.data, value.location.row, value.location.column });
+    }
 };
