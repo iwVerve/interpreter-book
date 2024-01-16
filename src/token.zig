@@ -42,17 +42,40 @@ pub const TokenData = union(enum) {
     pub fn format(value: TokenData, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
-        switch (value) {
-            .identifier => {
-                try writer.print("\"{s}\"", .{value.identifier});
-            },
-            .integer => {
-                try writer.print("\"{s}\"", .{value.integer});
-            },
-            else => {
-                try writer.print("{}", .{value});
-            },
-        }
+        try writer.print("{s}", .{switch (value) {
+            .illegal => "ILLEGAL",
+
+            .identifier => value.identifier,
+            .integer => value.integer,
+
+            .assign => "=",
+            .plus => "+",
+            .minus => "-",
+            .asterisk => "*",
+            .slash => "/",
+            .bang => "!",
+
+            .equal => "==",
+            .not_equal => "!=",
+            .less_than => "<",
+            .greater_than => ">",
+
+            .comma => ",",
+            .semicolon => ";",
+
+            .paren_l => "(",
+            .paren_r => ")",
+            .curly_l => "{",
+            .curly_r => "}",
+
+            .let => "let",
+            .function => "fn",
+            .true_ => "true",
+            .false_ => "false",
+            .if_ => "if",
+            .else_ => "else",
+            .return_ => "return",
+        }});
     }
 };
 
@@ -69,6 +92,7 @@ pub const Token = struct {
     pub fn format(value: Token, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
-        try writer.print("<< {?} at {}:{} >>", .{ value.data, value.location.row, value.location.column });
+        // try writer.print("{{{}}}@{}:{}", .{ value.data, value.location.row, value.location.column });
+        try writer.print("{}", .{value.data});
     }
 };

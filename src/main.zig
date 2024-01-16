@@ -12,10 +12,14 @@ pub const std_options = struct {
 
 pub fn main() !void {
     const string =
-        \\let a = 12;
-        \\return a;
-        \\if (true) {let a = 5;}
+        \\foo
+        \\let a = bar;
+        \\5
+        \\let b = 10;
+        //\\if (true) {let a = 5;}
     ;
     const statements = try Parser.parse(allocator, string);
-    std.debug.print("{any}\n", .{statements.items});
+    for (statements.items) |statement| {
+        std.debug.print("{}\n", .{statement});
+    }
 }

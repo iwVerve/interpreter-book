@@ -18,6 +18,16 @@ const ParserError = error{
     UnexpectedToken,
 };
 
+const OperatorPrecedence = enum {
+    lowest,
+    equals,
+    less_greater,
+    sum,
+    product,
+    prefix,
+    call,
+};
+
 pub const Parser = struct {
     lexer: Lexer,
     current_token: ?Token = null,
@@ -44,7 +54,7 @@ pub const Parser = struct {
         return switch (token.data) {
             .let => try self.parseLetStatement(),
             .return_ => try self.parseReturnStatement(),
-            else => ParserError.UnexpectedToken,
+            else => try self.parseExpressionStatement(),
         };
     }
 
@@ -53,7 +63,7 @@ pub const Parser = struct {
         const identifier = try self.parseIdentifier();
         const assign = self.nextToken() orelse return ParserError.SuddenEOF;
         if (assign.data != TokenData.assign) return ParserError.ExpectedAssign;
-        const expression = try self.parseExpression();
+        const expression = try self.parseExpression(.lowest);
         const semicolon = self.nextToken() orelse return ParserError.SuddenEOF;
         if (semicolon.data != TokenData.semicolon) return ParserError.ExpectedSemicolon;
         return .{ .let = .{
@@ -64,7 +74,7 @@ pub const Parser = struct {
 
     fn parseReturnStatement(self: *Parser) !Statement {
         self.advanceToken(); // Guaranteed .return
-        const expression = try self.parseExpression();
+        const expression = try self.parseExpression(.lowest);
         const semicolon = self.nextToken() orelse return ParserError.SuddenEOF;
         if (semicolon.data != TokenData.semicolon) return ParserError.ExpectedSemicolon;
         return .{ .return_ = .{
@@ -80,19 +90,61 @@ pub const Parser = struct {
         _ = expression;
     }
 
-    fn parseExpression(self: *Parser) !Expression {
-        const token = self.nextToken() orelse return ParserError.SuddenEOF;
-        switch (token.data) {
-            .integer => {
-                return .{ .integer_literal = .{ .value = token } };
-            },
-            .identifier => {
-                return .{ .identifier = .{ .name = token } };
-            },
-            else => return ParserError.UnexpectedToken,
+    fn parseExpressionStatement(self: *Parser) !Statement {
+        const expression = try self.parseExpression(.lowest);
+
+        // Optional semicolon
+        const peek = self.peekToken();
+        if (peek) |token| {
+            if (token.data == .semicolon) {
+                self.advanceToken();
+            }
         }
-        const value = self.nextToken() orelse return ParserError.SuddenEOF;
-        return .{ .integer_literal = .{ .value = value } };
+
+        return .{ .expression = expression };
+    }
+
+    fn parseExpression(self: *Parser, precedence: OperatorPrecedence) !Expression {
+        _ = precedence;
+        const token = self.peekToken() orelse return ParserError.SuddenEOF;
+        const optional_prefix = try self.callPrefixFunction(token);
+        if (optional_prefix) |prefix| {
+            return prefix;
+        }
+        return ParserError.UnexpectedToken;
+    }
+
+    // fn parseExpression(self: *Parser, precedence: OperatorPrecedence) !Expression {
+    //     const token = self.nextToken() orelse return ParserError.SuddenEOF;
+    //     switch (token.data) {
+    //         .integer => {
+    //             return .{ .integer_literal = .{ .value = token } };
+    //         },
+    //         .identifier => {
+    //             return .{ .identifier = .{ .name = token } };
+    //         },
+    //         else => return ParserError.UnexpectedToken,
+    //     }
+    //     const value = self.nextToken() orelse return ParserError.SuddenEOF;
+    //     return .{ .integer_literal = .{ .value = value } };
+    // }
+
+    fn callPrefixFunction(self: *Parser, token: Token) !?Expression {
+        return switch (token.data) {
+            .identifier => try self.parseIdentifierExpression(),
+            .integer => try self.parseIntegerExpression(),
+            else => null,
+        };
+    }
+
+    fn parseIdentifierExpression(self: *Parser) !Expression {
+        const identifier = try self.parseIdentifier();
+        return .{ .identifier = identifier };
+    }
+
+    fn parseIntegerExpression(self: *Parser) !Expression {
+        const integer = self.nextToken() orelse return ParserError.SuddenEOF;
+        return .{ .integer_literal = .{ .value = integer } };
     }
 
     fn parseIdentifier(self: *Parser) !Identifier {
