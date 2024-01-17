@@ -93,7 +93,8 @@ pub const UnaryExpression = struct {
 };
 
 pub const IntegerLiteral = struct {
-    value: Token,
+    token: Token,
+    value: i64,
 
     pub fn format(value: IntegerLiteral, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -103,11 +104,12 @@ pub const IntegerLiteral = struct {
 };
 
 pub const Identifier = struct {
-    name: Token,
+    token: Token,
+    name: []const u8,
 
     pub fn format(value: Identifier, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
         _ = fmt;
-        try writer.print("{}", .{value.name});
+        try writer.print("{s}", .{value.name});
     }
 };

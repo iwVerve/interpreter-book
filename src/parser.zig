@@ -144,13 +144,14 @@ pub const Parser = struct {
 
     fn parseIntegerExpression(self: *Parser) !Expression {
         const integer = self.nextToken() orelse return ParserError.SuddenEOF;
-        return .{ .integer_literal = .{ .value = integer } };
+        return .{ .integer_literal = .{ .token = integer, .value = try std.fmt.parseInt(i64, integer.data.integer, 10) } };
     }
 
     fn parseIdentifier(self: *Parser) !Identifier {
         const name = self.nextToken() orelse return ParserError.SuddenEOF;
         return .{
-            .name = name,
+            .token = name,
+            .name = name.data.identifier,
         };
     }
 
