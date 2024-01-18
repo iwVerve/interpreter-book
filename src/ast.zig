@@ -5,8 +5,8 @@ const ArrayList = std.ArrayList;
 pub const Statement = union(enum) {
     let: LetStatement,
     return_: ReturnStatement,
-    if_: IfStatement,
     expression: Expression,
+    block: BlockStatement,
 
     pub fn format(value: Statement, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -18,11 +18,11 @@ pub const Statement = union(enum) {
             .return_ => {
                 try writer.print("{};", .{value.return_});
             },
-            .if_ => {
-                try writer.print("{};", .{value.if_});
-            },
             .expression => {
                 try writer.print("{};", .{value.expression});
+            },
+            .block => {
+                try writer.print("{}", .{value.block});
             },
         }
     }
@@ -49,17 +49,29 @@ pub const ReturnStatement = struct {
     }
 };
 
-pub const IfStatement = struct {
-    condition: Expression,
-    then: ArrayList(Statement),
-    else_: ?ArrayList(Statement),
+pub const BlockStatement = struct {
+    statements: ArrayList(Statement),
+
+    pub fn format(value: BlockStatement, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("{{\n", .{});
+        for (value.statements.items) |statement| {
+            try writer.print("{}\n", .{statement});
+        }
+        try writer.print("}}", .{});
+    }
 };
 
 pub const Expression = union(enum) {
     integer_literal: IntegerLiteral,
     binary_expression: BinaryExpression,
-    unary_expression: UnaryExpression,
+    prefix_expression: PrefixExpression,
     identifier: Identifier,
+    boolean_literal: BooleanLiteral,
+    if_expression: IfExpression,
+    function_literal: FunctionLiteral,
+    call_expression: CallExpression,
 
     pub fn format(value: Expression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = options;
@@ -71,11 +83,23 @@ pub const Expression = union(enum) {
             .binary_expression => {
                 try writer.print("{}", .{value.binary_expression});
             },
-            .unary_expression => {
-                try writer.print("{}", .{value.unary_expression});
+            .prefix_expression => {
+                try writer.print("{}", .{value.prefix_expression});
             },
             .identifier => {
                 try writer.print("{}", .{value.identifier});
+            },
+            .boolean_literal => {
+                try writer.print("{}", .{value.boolean_literal});
+            },
+            .if_expression => {
+                try writer.print("{}", .{value.if_expression});
+            },
+            .function_literal => {
+                try writer.print("{}", .{value.function_literal});
+            },
+            .call_expression => {
+                try writer.print("{}", .{value.call_expression});
             },
         }
     }
@@ -85,11 +109,23 @@ pub const BinaryExpression = struct {
     lvalue: *Expression,
     operator: Token,
     rvalue: *Expression,
+
+    pub fn format(value: BinaryExpression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("({} {} {})", .{ value.lvalue, value.operator, value.rvalue });
+    }
 };
 
-pub const UnaryExpression = struct {
+pub const PrefixExpression = struct {
     operator: Token,
-    value: *Expression,
+    expression: *Expression,
+
+    pub fn format(value: PrefixExpression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("{}{}", .{ value.operator, value.expression });
+    }
 };
 
 pub const IntegerLiteral = struct {
@@ -111,5 +147,50 @@ pub const Identifier = struct {
         _ = options;
         _ = fmt;
         try writer.print("{s}", .{value.name});
+    }
+};
+
+pub const BooleanLiteral = struct {
+    token: Token,
+    value: bool,
+
+    pub fn format(value: BooleanLiteral, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("{}", .{value.value});
+    }
+};
+
+pub const IfExpression = struct {
+    condition: *Expression,
+    then: *Statement,
+    else_: ?*Statement,
+
+    pub fn format(value: IfExpression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("if {} {} else {?}", .{ value.condition, value.then, value.else_ });
+    }
+};
+
+pub const FunctionLiteral = struct {
+    parameters: ArrayList(Identifier),
+    body: *Statement,
+
+    pub fn format(value: FunctionLiteral, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("fn ({s}) {}", .{ value.parameters.items, value.body });
+    }
+};
+
+pub const CallExpression = struct {
+    expression: *Expression,
+    arguments: ArrayList(Expression),
+
+    pub fn format(value: CallExpression, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+        _ = options;
+        _ = fmt;
+        try writer.print("{}({s})", .{ value.expression, value.arguments.items });
     }
 };

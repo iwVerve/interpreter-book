@@ -60,7 +60,7 @@ pub const Lexer = struct {
                     if (std.mem.eql(u8, word, "let")) {
                         break :blk .let;
                     }
-                    if (std.mem.eql(u8, word, "function")) {
+                    if (std.mem.eql(u8, word, "fn")) {
                         break :blk .function;
                     }
                     if (std.mem.eql(u8, word, "if")) {

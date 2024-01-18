@@ -12,11 +12,28 @@ pub const std_options = struct {
 
 pub fn main() !void {
     const string =
-        \\foo
-        \\let a = bar;
-        \\5
-        \\let b = 10;
-        //\\if (true) {let a = 5;}
+        \\let foo = true * (1 + 2) + bar * 4;
+        \\
+        \\{
+        \\  let a = b;
+        \\  let b = c;
+        \\  {
+        \\      let c = d;
+        \\  }
+        \\}
+        \\if true {
+        \\  let a = 5;
+        \\}
+        \\else {
+        \\  let b = 6;
+        \\}
+        \\
+        \\let foo = if (x) {bar} else {baz};
+        \\
+        \\let add = fn(a, b) {
+        \\  a + b
+        \\};
+        \\add(2, 3);
     ;
     const statements = try Parser.parse(allocator, string);
     for (statements.items) |statement| {
