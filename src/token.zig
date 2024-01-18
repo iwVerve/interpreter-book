@@ -1,4 +1,5 @@
 const std = @import("std");
+const SerializeOptions = @import("serialize.zig").SerializeOptions;
 
 pub const TokenData = union(enum) {
     // Meta
@@ -39,14 +40,12 @@ pub const TokenData = union(enum) {
     else_,
     return_,
 
-    pub fn format(value: TokenData, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        try writer.print("{s}", .{switch (value) {
+    pub fn serialize(token_data: TokenData, options: *SerializeOptions) ![]const u8 {
+        return try std.fmt.allocPrint(options.allocator, "{s}", .{switch (token_data) {
             .illegal => "ILLEGAL",
 
-            .identifier => value.identifier,
-            .integer => value.integer,
+            .identifier => token_data.identifier,
+            .integer => token_data.integer,
 
             .assign => "=",
             .plus => "+",
@@ -89,10 +88,10 @@ pub const Token = struct {
     location: Location,
     length: u32,
 
-    pub fn format(value: Token, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = options;
-        _ = fmt;
-        // try writer.print("{{{}}}@{}:{}", .{ value.data, value.location.row, value.location.column });
-        try writer.print("{}", .{value.data});
+    pub fn serialize(token: Token, options: *SerializeOptions) ![]const u8 {
+        return try if (options.debug)
+            std.fmt.allocPrint(options.allocator, "{s}@{}:{}", .{ try token.data.serialize(options), token.location.row, token.location.column })
+        else
+            std.fmt.allocPrint(options.allocator, "{s}", .{try token.data.serialize(options)});
     }
 };
