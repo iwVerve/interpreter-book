@@ -10,36 +10,37 @@ const Statement = ast.Statement;
 const ParserError = @import("error.zig").ParserError;
 const ParserErrors = @import("error.zig").ParserErrors;
 
-pub fn parseStatements(self: *Parser) !ArrayList(Statement) {
-    var statements = ArrayList(Statement).init(self.allocator);
+const ExpressionParser = @import("expression.zig");
+
+pub fn parseStatements(parser: *Parser) !ArrayList(Statement) {
+    var statements = ArrayList(Statement).init(parser.allocator);
     while (true) {
-        const peek = self.peekToken() orelse break;
+        const peek = parser.peekToken() orelse break;
         if (peek.data == .curly_r) {
             break;
         }
-        const statement = (try self.parseStatement()) orelse break;
+        const statement = (try parseStatement(parser)) orelse break;
         try statements.append(statement);
     }
     return statements;
 }
-
-pub fn parseStatement(self: *Parser) !?Statement {
-    const token = self.peekToken() orelse return null;
+pub fn parseStatement(parser: *Parser) !?Statement {
+    const token = parser.peekToken() orelse return null;
     return switch (token.data) {
-        .let => try self.parseLetStatement(),
-        .return_ => try self.parseReturnStatement(),
-        .curly_l => try self.parseBlockStatement(),
-        else => try self.parseExpressionStatement(),
+        .let => try parseLetStatement(parser),
+        .return_ => try parseReturnStatement(parser),
+        .curly_l => try parseBlockStatement(parser),
+        else => try parseExpressionStatement(parser),
     };
 }
 
-pub fn parseLetStatement(self: *Parser) !Statement {
-    self.advanceToken(); // Guaranteed .let
-    const identifier = try self.parseIdentifier();
-    const assign = self.nextToken() orelse return ParserError.SuddenEOF;
+pub fn parseLetStatement(parser: *Parser) !Statement {
+    parser.advanceToken(); // Guaranteed .let
+    const identifier = try ExpressionParser.parseIdentifier(parser);
+    const assign = parser.nextToken() orelse return ParserError.SuddenEOF;
     if (assign.data != TokenData.assign) return ParserError.ExpectedAssign;
-    const expression = try self.parseExpression(.lowest);
-    const semicolon = self.nextToken() orelse return ParserError.SuddenEOF;
+    const expression = try ExpressionParser.parseExpression(parser, .lowest);
+    const semicolon = parser.nextToken() orelse return ParserError.SuddenEOF;
     if (semicolon.data != TokenData.semicolon) return ParserError.ExpectedSemicolon;
     return .{ .let = .{
         .identifier = identifier,
@@ -47,34 +48,34 @@ pub fn parseLetStatement(self: *Parser) !Statement {
     } };
 }
 
-pub fn parseReturnStatement(self: *Parser) !Statement {
-    self.advanceToken(); // Guaranteed .return
-    const expression = try self.parseExpression(.lowest);
-    const semicolon = self.nextToken() orelse return ParserError.SuddenEOF;
+pub fn parseReturnStatement(parser: *Parser) !Statement {
+    parser.advanceToken(); // Guaranteed .return
+    const expression = try ExpressionParser.parseExpression(parser, .lowest);
+    const semicolon = parser.nextToken() orelse return ParserError.SuddenEOF;
     if (semicolon.data != TokenData.semicolon) return ParserError.ExpectedSemicolon;
     return .{ .return_ = .{
         .expression = expression,
     } };
 }
 
-pub fn parseExpressionStatement(self: *Parser) !Statement {
-    const expression = try self.parseExpression(.lowest);
+pub fn parseExpressionStatement(parser: *Parser) !Statement {
+    const expression = try ExpressionParser.parseExpression(parser, .lowest);
 
     // Optional semicolon
-    const peek = self.peekToken();
+    const peek = parser.peekToken();
     if (peek) |token| {
         if (token.data == .semicolon) {
-            self.advanceToken();
+            parser.advanceToken();
         }
     }
 
     return .{ .expression = expression };
 }
 
-pub fn parseBlockStatement(self: *Parser) ParserErrors!Statement {
-    self.advanceToken(); // Guaranteed.curly_l
-    const statements = try self.parseStatements();
-    const curly_r = self.nextToken() orelse return ParserError.SuddenEOF;
+pub fn parseBlockStatement(parser: *Parser) ParserErrors!Statement {
+    parser.advanceToken(); // Guaranteed.curly_l
+    const statements = try parseStatements(parser);
+    const curly_r = parser.nextToken() orelse return ParserError.SuddenEOF;
     if (curly_r.data != .curly_r) {
         return ParserError.ExpectedCurlyR;
     }
