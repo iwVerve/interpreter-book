@@ -3,6 +3,7 @@ const std = @import("std");
 pub const SerializeOptions = struct {
     debug: bool = false,
     indent: u32 = 0,
+    top_level: bool = true,
 };
 
 pub const SerializeErrors = error{

@@ -1,5 +1,5 @@
 const std = @import("std");
-const SerializeOptions = @import("serialize.zig").SerializeOptions;
+const SerializeOptions = @import("ast/serialize.zig").SerializeOptions;
 
 pub const TokenData = union(enum) {
     // Meta

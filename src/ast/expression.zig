@@ -4,8 +4,11 @@ const ArrayList = std.ArrayList;
 const Token = @import("../token.zig").Token;
 const Statement = @import("../ast.zig").Statement;
 
-const SerializeOptions = @import("../serialize.zig").SerializeOptions;
-const SerializeErrors = @import("../serialize.zig").SerializeErrors;
+const SerializeOptions = @import("serialize.zig").SerializeOptions;
+const SerializeErrors = @import("serialize.zig").SerializeErrors;
+
+const getPrecedence = @import("../parser/precedence.zig").getPrecedence;
+const OperatorPrecedence = @import("../parser/precedence.zig").OperatorPrecedence;
 
 pub const Expression = union(enum) {
     integer_literal: IntegerLiteral,
@@ -17,10 +20,10 @@ pub const Expression = union(enum) {
     function_literal: FunctionLiteral,
     call_expression: CallExpression,
 
-    pub fn write(self: Expression, writer: anytype, options: *SerializeOptions) SerializeErrors!void {
+    pub fn write(self: Expression, writer: anytype, options: *SerializeOptions, precedence: OperatorPrecedence) SerializeErrors!void {
         switch (self) {
             .integer_literal => try self.integer_literal.write(writer, options),
-            .binary_expression => try self.binary_expression.write(writer, options),
+            .binary_expression => try self.binary_expression.write(writer, options, precedence),
             .prefix_expression => try self.prefix_expression.write(writer, options),
             .identifier => try self.identifier.write(writer, options),
             .boolean_literal => try self.boolean_literal.write(writer, options),
@@ -36,12 +39,21 @@ pub const BinaryExpression = struct {
     operator: Token,
     rvalue: *Expression,
 
-    pub fn write(self: BinaryExpression, writer: anytype, options: *SerializeOptions) !void {
-        _ = try writer.write("(");
-        try self.lvalue.write(writer, options);
+    pub fn write(self: BinaryExpression, writer: anytype, options: *SerializeOptions, precedence: OperatorPrecedence) !void {
+        const self_precedence = getPrecedence(self.operator) orelse .lowest;
+        const surround = @intFromEnum(self_precedence) < @intFromEnum(precedence);
+
+        if (surround) {
+            _ = try writer.write("(");
+        }
+        try self.lvalue.write(writer, options, self_precedence);
+        _ = try writer.write(" ");
         try self.operator.write(writer, options);
-        try self.rvalue.write(writer, options);
-        _ = try writer.write(")");
+        _ = try writer.write(" ");
+        try self.rvalue.write(writer, options, self_precedence);
+        if (surround) {
+            _ = try writer.write(")");
+        }
     }
 };
 
@@ -51,7 +63,7 @@ pub const PrefixExpression = struct {
 
     pub fn write(self: PrefixExpression, writer: anytype, options: *SerializeOptions) !void {
         try self.operator.write(writer, options);
-        try self.expression.write(writer, options);
+        try self.expression.write(writer, options, .prefix);
     }
 };
 
@@ -89,7 +101,7 @@ pub const IfExpression = struct {
 
     pub fn write(self: IfExpression, writer: anytype, options: *SerializeOptions) !void {
         _ = try writer.write("if ");
-        try self.condition.write(writer, options);
+        try self.condition.write(writer, options, .lowest);
         _ = try writer.write(" ");
         try self.then.write(writer, options);
         if (self.else_) |else_some| {
@@ -124,7 +136,7 @@ pub const CallExpression = struct {
     arguments: ArrayList(Expression),
 
     pub fn write(self: CallExpression, writer: anytype, options: *SerializeOptions) !void {
-        try self.expression.write(writer, options);
+        try self.expression.write(writer, options, .lowest);
         _ = try writer.write("(");
         var first = true;
         for (self.arguments.items) |argument| {
@@ -133,7 +145,7 @@ pub const CallExpression = struct {
             } else {
                 _ = try writer.write(", ");
             }
-            try argument.write(writer, options);
+            try argument.write(writer, options, .lowest);
         }
         _ = try writer.write(")");
     }

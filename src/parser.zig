@@ -6,6 +6,7 @@ const Token = @import("token.zig").Token;
 
 const ast = @import("ast.zig");
 const Statement = ast.Statement;
+const BlockStatement = ast.BlockStatement;
 
 pub const Parser = struct {
     lexer: Lexer,
@@ -19,11 +20,12 @@ pub const Parser = struct {
     const StatementParser = @import("parser/statement.zig");
     const ExpressionParser = @import("parser/expression.zig");
 
-    pub fn parse(allocator: std.mem.Allocator, input: []const u8) !ArrayList(Statement) {
+    pub fn parse(allocator: std.mem.Allocator, input: []const u8) !BlockStatement {
         var lexer = Lexer.init(input);
         var parser = Parser{ .lexer = lexer, .allocator = allocator };
         parser.advanceToken();
-        return try StatementParser.parseStatements(&parser);
+        const statements = try StatementParser.parseStatements(&parser);
+        return .{ .statements = statements };
     }
 
     pub fn nextToken(self: *Parser) ?Token {
