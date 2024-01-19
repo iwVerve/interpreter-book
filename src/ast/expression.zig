@@ -17,17 +17,17 @@ pub const Expression = union(enum) {
     function_literal: FunctionLiteral,
     call_expression: CallExpression,
 
-    pub fn serialize(self: Expression, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return std.fmt.allocPrint(options.allocator, "{s}", .{try switch (self) {
-            .integer_literal => self.integer_literal.serialize(options),
-            .binary_expression => self.binary_expression.serialize(options),
-            .prefix_expression => self.prefix_expression.serialize(options),
-            .identifier => self.identifier.serialize(options),
-            .boolean_literal => self.boolean_literal.serialize(options),
-            .if_expression => self.if_expression.serialize(options),
-            .function_literal => self.function_literal.serialize(options),
-            .call_expression => self.call_expression.serialize(options),
-        }});
+    pub fn write(self: Expression, writer: anytype, options: *SerializeOptions) SerializeErrors!void {
+        switch (self) {
+            .integer_literal => try self.integer_literal.write(writer, options),
+            .binary_expression => try self.binary_expression.write(writer, options),
+            .prefix_expression => try self.prefix_expression.write(writer, options),
+            .identifier => try self.identifier.write(writer, options),
+            .boolean_literal => try self.boolean_literal.write(writer, options),
+            .if_expression => try self.if_expression.write(writer, options),
+            .function_literal => try self.function_literal.write(writer, options),
+            .call_expression => try self.call_expression.write(writer, options),
+        }
     }
 };
 
@@ -36,8 +36,12 @@ pub const BinaryExpression = struct {
     operator: Token,
     rvalue: *Expression,
 
-    pub fn serialize(self: BinaryExpression, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}{s}{s}", .{ try self.lvalue.serialize(options), try self.operator.serialize(options), try self.rvalue.serialize(options) });
+    pub fn write(self: BinaryExpression, writer: anytype, options: *SerializeOptions) !void {
+        _ = try writer.write("(");
+        try self.lvalue.write(writer, options);
+        try self.operator.write(writer, options);
+        try self.rvalue.write(writer, options);
+        _ = try writer.write(")");
     }
 };
 
@@ -45,8 +49,9 @@ pub const PrefixExpression = struct {
     operator: Token,
     expression: *Expression,
 
-    pub fn serialize(self: PrefixExpression, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}{s}", .{ try self.operator.serialize(options), try self.expression.serialize(options) });
+    pub fn write(self: PrefixExpression, writer: anytype, options: *SerializeOptions) !void {
+        try self.operator.write(writer, options);
+        try self.expression.write(writer, options);
     }
 };
 
@@ -54,8 +59,8 @@ pub const IntegerLiteral = struct {
     token: Token,
     value: i64,
 
-    pub fn serialize(self: IntegerLiteral, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}", .{try self.token.serialize(options)});
+    pub fn write(self: IntegerLiteral, writer: anytype, options: *SerializeOptions) !void {
+        try self.token.write(writer, options);
     }
 };
 
@@ -63,8 +68,8 @@ pub const Identifier = struct {
     token: Token,
     name: []const u8,
 
-    pub fn serialize(self: Identifier, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}", .{try self.token.serialize(options)});
+    pub fn write(self: Identifier, writer: anytype, options: *SerializeOptions) !void {
+        try self.token.write(writer, options);
     }
 };
 
@@ -72,8 +77,8 @@ pub const BooleanLiteral = struct {
     token: Token,
     value: bool,
 
-    pub fn serialize(self: BooleanLiteral, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}", .{try self.token.serialize(options)});
+    pub fn write(self: BooleanLiteral, writer: anytype, options: *SerializeOptions) !void {
+        try self.token.write(writer, options);
     }
 };
 
@@ -82,8 +87,15 @@ pub const IfExpression = struct {
     then: *Statement,
     else_: ?*Statement,
 
-    pub fn serialize(self: IfExpression, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "if {s} {s}", .{ try self.condition.serialize(options), try self.then.serialize(options) });
+    pub fn write(self: IfExpression, writer: anytype, options: *SerializeOptions) !void {
+        _ = try writer.write("if ");
+        try self.condition.write(writer, options);
+        _ = try writer.write(" ");
+        try self.then.write(writer, options);
+        if (self.else_) |else_some| {
+            _ = try writer.write(" else ");
+            try else_some.write(writer, options);
+        }
     }
 };
 
@@ -91,9 +103,19 @@ pub const FunctionLiteral = struct {
     parameters: ArrayList(Identifier),
     body: *Statement,
 
-    pub fn serialize(self: FunctionLiteral, options: *SerializeOptions) SerializeErrors![]const u8 {
-        _ = self;
-        return try std.fmt.allocPrint(options.allocator, "fn() {{...}}", .{});
+    pub fn write(self: FunctionLiteral, writer: anytype, options: *SerializeOptions) !void {
+        _ = try writer.write("fn(");
+        var first = true;
+        for (self.parameters.items) |parameter| {
+            if (first) {
+                first = false;
+            } else {
+                _ = try writer.write(", ");
+            }
+            _ = try parameter.write(writer, options);
+        }
+        _ = try writer.write(") ");
+        try self.body.write(writer, options);
     }
 };
 
@@ -101,7 +123,18 @@ pub const CallExpression = struct {
     expression: *Expression,
     arguments: ArrayList(Expression),
 
-    pub fn serialize(self: CallExpression, options: *SerializeOptions) SerializeErrors![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}(...)", .{try self.expression.serialize(options)});
+    pub fn write(self: CallExpression, writer: anytype, options: *SerializeOptions) !void {
+        try self.expression.write(writer, options);
+        _ = try writer.write("(");
+        var first = true;
+        for (self.arguments.items) |argument| {
+            if (first) {
+                first = false;
+            } else {
+                _ = try writer.write(", ");
+            }
+            try argument.write(writer, options);
+        }
+        _ = try writer.write(")");
     }
 };

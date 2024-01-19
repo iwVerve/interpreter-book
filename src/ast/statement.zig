@@ -5,6 +5,7 @@ const Expression = @import("../ast.zig").Expression;
 const Identifier = @import("../ast.zig").Identifier;
 
 const SerializeOptions = @import("../serialize.zig").SerializeOptions;
+const SerializeErrors = @import("../serialize.zig").SerializeErrors;
 
 pub const Statement = union(enum) {
     let: LetStatement,
@@ -12,24 +13,27 @@ pub const Statement = union(enum) {
     expression: Expression,
     block: BlockStatement,
 
-    pub fn serialize(self: Statement, options: *SerializeOptions) ![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "{s}", .{try switch (self) {
-            .let => self.let.serialize(options),
-            .return_ => self.return_.serialize(options),
-            .expression => self.expression.serialize(options),
-            .block => self.block.serialize(options),
-        }});
+    pub fn write(self: Statement, writer: anytype, options: *SerializeOptions) SerializeErrors!void {
+        switch (self) {
+            .let => try self.let.write(writer, options),
+            .return_ => try self.return_.write(writer, options),
+            .expression => try self.expression.write(writer, options),
+            .block => try self.block.write(writer, options),
+        }
     }
 };
 
 pub const BlockStatement = struct {
     statements: ArrayList(Statement),
 
-    pub fn serialize(self: BlockStatement, options: *SerializeOptions) ![]const u8 {
-        _ = self;
-        const out = try options.allocator.create([]u8);
-        out.* = "";
-        return out.*;
+    pub fn write(self: BlockStatement, writer: anytype, options: *SerializeOptions) !void {
+        options.indent += 1;
+        try writer.print("{{\n", .{});
+        for (self.statements.items) |statement| {
+            try statement.write(writer, options);
+        }
+        try writer.print("}}\n", .{});
+        options.indent -= 1;
     }
 };
 
@@ -37,15 +41,21 @@ pub const LetStatement = struct {
     identifier: Identifier,
     expression: Expression,
 
-    pub fn serialize(self: LetStatement, options: *SerializeOptions) ![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "let {s} = {s};", .{ try self.identifier.serialize(options), try self.expression.serialize(options) });
+    pub fn write(self: LetStatement, writer: anytype, options: *SerializeOptions) !void {
+        _ = try writer.write("let ");
+        try self.identifier.write(writer, options);
+        _ = try writer.write(" = ");
+        try self.expression.write(writer, options);
+        _ = try writer.write(";\n");
     }
 };
 
 pub const ReturnStatement = struct {
     expression: Expression,
 
-    pub fn serialize(self: ReturnStatement, options: *SerializeOptions) ![]const u8 {
-        return try std.fmt.allocPrint(options.allocator, "return {s};", .{try self.expression.serialize(options)});
+    pub fn write(self: ReturnStatement, writer: anytype, options: *SerializeOptions) !void {
+        _ = try writer.write("return ");
+        try self.expression.write(writer, options);
+        _ = try writer.write(";\n");
     }
 };

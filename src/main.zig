@@ -7,20 +7,21 @@ const SerializeOptions = @import("serialize.zig").SerializeOptions;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
 
-pub const std_options = struct {
-    pub const fmt_max_depth = 10;
-};
-
 pub fn main() !void {
     const string =
-        \\let foo = bar;
+        \\let factorial = fn(n) {
+        \\  if n < 2 {
+        \\      return 1;
+        \\  }
+        \\  return n * factorial(n - 1);
+        \\};
     ;
     const statements = try Parser.parse(allocator, string);
     var options = SerializeOptions{
-        .allocator = allocator,
         .debug = false,
     };
+    const writer = std.io.getStdOut().writer();
     for (statements.items) |statement| {
-        std.debug.print("{s}\n", .{try statement.serialize(&options)});
+        try statement.write(writer, &options);
     }
 }

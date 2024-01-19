@@ -249,7 +249,6 @@ pub const Parser = struct {
     }
 
     fn parseFunctionExpression(self: *Parser) ParserErrors!Expression {
-        std.debug.print("parseFunctionExpression\n", .{});
         self.advanceToken(); // Guaranteed .function
         const paren_l = self.nextToken() orelse return ParserError.SuddenEOF;
         if (paren_l.data != .paren_l) {
