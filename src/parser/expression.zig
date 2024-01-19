@@ -139,6 +139,11 @@ pub fn parseFunctionExpression(parser: *Parser) ParserErrors!Expression {
     }
     var parameters = ArrayList(Identifier).init(parser.allocator);
     while (true) {
+        const peek = parser.peekToken() orelse return ParserError.SuddenEOF;
+        if (peek.data == .paren_r) {
+            parser.advanceToken();
+            break;
+        }
         try parameters.append(try parseIdentifier(parser));
         const next = parser.nextToken() orelse return ParserError.SuddenEOF;
         switch (next.data) {

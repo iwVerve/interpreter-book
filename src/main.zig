@@ -9,12 +9,23 @@ const allocator = gpa.allocator();
 
 pub fn main() !void {
     const string =
+        \\let a = 1;
+        \\let b = fn() {
+        \\  return 2;
+        \\};
         \\let factorial = fn(n) {
         \\  if n < 2 {
         \\      return 1;
         \\  }
         \\  return n * factorial(n - 1);
         \\};
+        \\return if true {1} else {2};
+        \\if (true) {
+        \\  print(foo);
+        \\}
+        \\else {
+        \\  print(bar);
+        \\}
     ;
     const statements = try Parser.parse(allocator, string);
     var options = SerializeOptions{

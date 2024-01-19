@@ -17,7 +17,10 @@ pub const Statement = union(enum) {
         switch (self) {
             .let => try self.let.write(writer, options),
             .return_ => try self.return_.write(writer, options),
-            .expression => try self.expression.write(writer, options),
+            .expression => {
+                try self.expression.write(writer, options);
+                _ = try writer.write("\n");
+            },
             .block => try self.block.write(writer, options),
         }
     }
@@ -30,10 +33,12 @@ pub const BlockStatement = struct {
         options.indent += 1;
         try writer.print("{{\n", .{});
         for (self.statements.items) |statement| {
+            try writer.writeByteNTimes(' ', 4 * options.indent);
             try statement.write(writer, options);
         }
-        try writer.print("}}\n", .{});
         options.indent -= 1;
+        try writer.writeByteNTimes(' ', 4 * options.indent);
+        try writer.print("}}", .{});
     }
 };
 
