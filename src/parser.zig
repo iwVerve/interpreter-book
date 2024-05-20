@@ -21,7 +21,7 @@ pub const Parser = struct {
     const ExpressionParser = @import("parser/expression.zig");
 
     pub fn parse(allocator: std.mem.Allocator, input: []const u8) !BlockStatement {
-        var lexer = Lexer.init(input);
+        const lexer = Lexer.init(input);
         var parser = Parser{ .lexer = lexer, .allocator = allocator };
         parser.advanceToken();
         const statements = try StatementParser.parseStatements(&parser);
