@@ -47,19 +47,18 @@ pub const Lexer = struct {
     }
 
     fn readInteger(self: *Lexer) !Token {
-        var buffer = ArrayList(u8).init(self.allocator);
-        defer buffer.deinit();
+        const integer_start = self.position;
 
         while (self.peek()) |peek_char| {
             if (!isDigit(peek_char)) {
                 break;
             }
 
-            try buffer.append(peek_char);
             self.advance();
         }
 
-        std.debug.print("{s}\n", .{buffer.items});
+        const integer = self.source[integer_start..self.position];
+        std.debug.print("{s}\n", .{integer});
 
         return .integer;
     }
@@ -69,19 +68,18 @@ pub const Lexer = struct {
     }
 
     fn readWord(self: *Lexer) !Token {
-        var buffer = ArrayList(u8).init(self.allocator);
-        defer buffer.deinit();
+        const word_start = self.position;
 
         while (self.peek()) |peek_char| {
             if (!isDigit(peek_char) and !(isLetter(peek_char))) {
                 break;
             }
 
-            try buffer.append(peek_char);
             self.advance();
         }
 
-        std.debug.print("{s}\n", .{buffer.items});
+        const word = self.source[word_start..self.position];
+        std.debug.print("{s}\n", .{word});
 
         return .identifier;
     }
