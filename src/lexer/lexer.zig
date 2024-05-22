@@ -1,7 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
-const Token = @import("token.zig").Token;
+const Token = @import("../token.zig").Token;
 
 pub const Lexer = struct {
     source: []const u8,
