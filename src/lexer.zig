@@ -101,7 +101,12 @@ pub const Lexer = struct {
             var chars: []const u8 = &.{};
 
             for (operators) |operator| {
-                for (operator[0]) |operator_char| {
+                unq: for (operator[0]) |operator_char| {
+                    for (chars) |check_char| {
+                        if (operator_char == check_char) {
+                            continue :unq;
+                        }
+                    }
                     const array: []const u8 = &.{operator_char};
                     chars = chars ++ array;
                 }
@@ -109,7 +114,7 @@ pub const Lexer = struct {
 
             break :blk chars;
         };
-        // @compileLog(operator_chars);
+        @compileLog(operator_chars);
 
         for (operator_chars) |operator_char| {
             if (char == operator_char) {
