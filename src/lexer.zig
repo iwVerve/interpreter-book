@@ -114,7 +114,6 @@ pub const Lexer = struct {
 
             break :blk chars;
         };
-        @compileLog(operator_chars);
 
         for (operator_chars) |operator_char| {
             if (char == operator_char) {
