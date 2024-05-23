@@ -6,7 +6,16 @@ pub const Token = union(enum) {
     integer: u32,
 
     assign,
-    add,
+    plus,
+    minus,
+    bang,
+    asterisk,
+    slash,
+
+    equal,
+    not_equal,
+    less_than,
+    greater_than,
 
     comma,
     semicolon,
@@ -18,4 +27,9 @@ pub const Token = union(enum) {
 
     function,
     let,
+    true,
+    false,
+    if_,
+    else_,
+    return_,
 };

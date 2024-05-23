@@ -5,10 +5,21 @@ const Token = @import("token.zig").Token;
 
 const operators = .{
     .{ "=", .assign },
-    .{ "=", .assign },
-    .{ "+", .add },
+
+    .{ "+", .plus },
+    .{ "-", .minus },
+    .{ "*", .asterisk },
+    .{ "/", .slash },
+    .{ "!", .bang },
+
+    .{ "==", .equal },
+    .{ "!=", .not_equal },
+    .{ "<", .less_than },
+    .{ ">", .greater_than },
+
     .{ ",", .comma },
     .{ ";", .semicolon },
+
     .{ "(", .paren_l },
     .{ ")", .paren_r },
     .{ "{", .brace_l },
@@ -18,6 +29,11 @@ const operators = .{
 const keywords = .{
     .{ "let", .let },
     .{ "fn", .function },
+    .{ "true", .true },
+    .{ "false", .false },
+    .{ "if", .if_ },
+    .{ "else", .else_ },
+    .{ "return", .return_ },
 };
 
 pub const Lexer = struct {

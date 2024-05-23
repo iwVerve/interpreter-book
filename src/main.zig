@@ -5,13 +5,12 @@ const Lexer = @import("lexer.zig").Lexer;
 pub fn main() !void {
     const source =
         \\let five = 5;
-        \\let ten = 10;
-        \\
-        \\let add = fn(x, y) {
-        \\    x + y;
-        \\};
-        \\
-        \\let result = add(five, ten);
+        \\if (five < 10) {
+        \\    return true;
+        \\}
+        \\else if (five == 5) {
+        \\    return false;
+        \\}
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
