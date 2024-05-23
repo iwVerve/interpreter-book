@@ -21,4 +21,8 @@ pub fn main() !void {
     var lexer = Lexer{ .source = source, .allocator = allocator };
     const tokens = try lexer.lex();
     defer tokens.deinit();
+
+    for (tokens.items) |token| {
+        std.debug.print("{any}\n", .{token});
+    }
 }

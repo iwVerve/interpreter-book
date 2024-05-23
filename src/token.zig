@@ -2,11 +2,11 @@ pub const Token = union(enum) {
     illegal,
     eof,
 
-    identifier,
-    integer,
+    identifier: []const u8,
+    integer: u32,
 
     assign,
-    plus,
+    add,
 
     comma,
     semicolon,

@@ -3,6 +3,23 @@ const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Token = @import("../token.zig").Token;
 
+const operators = .{
+    .{ "=", .assign },
+    .{ "=", .assign },
+    .{ "+", .add },
+    .{ ",", .comma },
+    .{ ";", .semicolon },
+    .{ "(", .paren_l },
+    .{ ")", .paren_r },
+    .{ "{", .brace_l },
+    .{ "}", .brace_r },
+};
+
+const keywords = .{
+    .{ "let", .let },
+    .{ "fn", .function },
+};
+
 pub const Lexer = struct {
     source: []const u8,
     position: u32 = 0,
@@ -57,17 +74,75 @@ pub const Lexer = struct {
             self.advance();
         }
 
-        const integer = self.source[integer_start..self.position];
-        std.debug.print("{s}\n", .{integer});
+        const integer_string = self.source[integer_start..self.position];
+        const integer = try std.fmt.parseInt(u32, integer_string, 10);
 
-        return .integer;
+        return .{ .integer = integer };
+    }
+
+    fn isOperator(char: u8) bool {
+        const operator_chars = comptime blk: {
+            var chars: []const u8 = &.{};
+
+            for (operators) |operator| {
+                for (operator[0]) |operator_char| {
+                    const array: []const u8 = &.{operator_char};
+                    chars = chars ++ array;
+                }
+            }
+
+            break :blk chars;
+        };
+        // @compileLog(operator_chars);
+
+        for (operator_chars) |operator_char| {
+            if (char == operator_char) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn readOperator(self: *Lexer) Token {
+        const first_char = self.next() orelse unreachable;
+        const peek_char = self.peek();
+
+        if (peek_char) |second_char| {
+            if (isOperator(second_char)) {
+                inline for (operators) |operator_tuple| {
+                    const operator_string = operators[0];
+                    if (operator_string.len != 2) {
+                        continue;
+                    }
+                    if (first_char != operator_string[0]) {
+                        continue;
+                    }
+                    if (second_char == operator_string[1]) {
+                        return operator_tuple[1];
+                    }
+                }
+            }
+        }
+
+        inline for (operators) |operator_tuple| {
+            const operator_string = operators[0];
+            if (operator_string.len != 1) {
+                continue;
+            }
+            if (first_char == operator_string[0]) {
+                return operator_tuple[1];
+            }
+        }
     }
 
     fn isLetter(char: u8) bool {
-        return (char >= 'a' and char <= 'z') or (char >= 'A' and char <= 'Z') or char == '_';
+        return switch (char) {
+            'a'...'z', 'A'...'Z', '_' => true,
+            else => false,
+        };
     }
 
-    fn readWord(self: *Lexer) !Token {
+    fn readWord(self: *Lexer) Token {
         const word_start = self.position;
 
         while (self.peek()) |peek_char| {
@@ -79,9 +154,21 @@ pub const Lexer = struct {
         }
 
         const word = self.source[word_start..self.position];
-        std.debug.print("{s}\n", .{word});
+        if (getKeyword(word)) |keyword| {
+            return keyword;
+        }
 
-        return .identifier;
+        return .{ .identifier = word };
+    }
+
+    fn getKeyword(word: []const u8) ?Token {
+        inline for (keywords) |keyword_tuple| {
+            if (std.mem.eql(u8, word, keyword_tuple[0])) {
+                return keyword_tuple[1];
+            }
+        }
+
+        return null;
     }
 
     pub fn lex(self: *Lexer) !ArrayList(Token) {
@@ -93,9 +180,11 @@ pub const Lexer = struct {
             } else if (isDigit(peek_char)) {
                 try tokens.append(try self.readInteger());
             } else if (isLetter(peek_char)) {
-                try tokens.append(try self.readWord());
-            } else { // TODO: Special characters
-                self.advance();
+                try tokens.append(self.readWord());
+            } else if (isOperator(peek_char)) {
+                try tokens.append(self.readOperator());
+            } else {
+                return error.UnknownCharacter;
             }
         }
 
