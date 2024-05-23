@@ -103,36 +103,39 @@ pub const Lexer = struct {
         return false;
     }
 
+    fn matchOperator(self: *Lexer, operator: []const u8) ?Token {
+        inline for (operators) |operator_tuple| {
+            const operator_string = operator_tuple[0];
+            if (std.mem.eql(u8, operator, operator_string)) {
+                for (1..operator.len) |_| {
+                    self.advance();
+                }
+                return operator_tuple[1];
+            }
+        }
+        return null;
+    }
+
     fn readOperator(self: *Lexer) Token {
-        const first_char = self.next() orelse unreachable;
+        const start = self.position;
+        self.advance();
         const peek_char = self.peek();
 
-        if (peek_char) |second_char| {
-            if (isOperator(second_char)) {
-                inline for (operators) |operator_tuple| {
-                    const operator_string = operators[0];
-                    if (operator_string.len != 2) {
-                        continue;
-                    }
-                    if (first_char != operator_string[0]) {
-                        continue;
-                    }
-                    if (second_char == operator_string[1]) {
-                        return operator_tuple[1];
-                    }
+        if (peek_char) |next_char| {
+            if (isOperator(next_char)) {
+                const long_operator = self.source[start .. start + 2];
+                if (self.matchOperator(long_operator)) |token| {
+                    return token;
                 }
             }
         }
 
-        inline for (operators) |operator_tuple| {
-            const operator_string = operators[0];
-            if (operator_string.len != 1) {
-                continue;
-            }
-            if (first_char == operator_string[0]) {
-                return operator_tuple[1];
-            }
+        const operator = self.source[start .. start + 1];
+        if (self.matchOperator(operator)) |token| {
+            return token;
         }
+
+        unreachable;
     }
 
     fn isLetter(char: u8) bool {
