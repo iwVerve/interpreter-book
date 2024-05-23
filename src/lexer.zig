@@ -68,6 +68,7 @@ pub const Lexer = struct {
     }
 
     fn isOperator(char: u8) bool {
+        // Construct array of all operator chars from operator array.
         const operator_chars = comptime blk: {
             var chars: []const u8 = &.{};
 
@@ -95,6 +96,8 @@ pub const Lexer = struct {
     }
 
     fn matchOperator(self: *Lexer, operator: []const u8) ?Token {
+        // Match operator against operator array
+        // Could be optimized since operator length is known at each function call
         inline for (operators) |operator_tuple| {
             const operator_string = operator_tuple[0];
             if (std.mem.eql(u8, operator, operator_string)) {
@@ -112,6 +115,7 @@ pub const Lexer = struct {
         self.advance();
         const peek_char = self.peek();
 
+        // Check for 2-wide operator first
         if (peek_char) |next_char| {
             if (isOperator(next_char)) {
                 const long_operator = self.source[start .. start + 2];
