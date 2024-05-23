@@ -1,40 +1,11 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
-const Token = @import("token.zig").Token;
 
-const operators = .{
-    .{ "=", .assign },
-
-    .{ "+", .plus },
-    .{ "-", .minus },
-    .{ "*", .asterisk },
-    .{ "/", .slash },
-    .{ "!", .bang },
-
-    .{ "==", .equal },
-    .{ "!=", .not_equal },
-    .{ "<", .less_than },
-    .{ ">", .greater_than },
-
-    .{ ",", .comma },
-    .{ ";", .semicolon },
-
-    .{ "(", .paren_l },
-    .{ ")", .paren_r },
-    .{ "{", .brace_l },
-    .{ "}", .brace_r },
-};
-
-const keywords = .{
-    .{ "let", .let },
-    .{ "fn", .function },
-    .{ "true", .true },
-    .{ "false", .false },
-    .{ "if", .if_ },
-    .{ "else", .else_ },
-    .{ "return", .return_ },
-};
+const TokenImpl = @import("token.zig");
+const Token = TokenImpl.Token;
+const operators = TokenImpl.operators;
+const keywords = TokenImpl.keywords;
 
 pub const Lexer = struct {
     source: []const u8,
