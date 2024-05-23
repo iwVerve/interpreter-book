@@ -177,10 +177,10 @@ pub const Lexer = struct {
                 self.consumeWhitespace();
             } else if (isDigit(peek_char)) {
                 try tokens.append(try self.readInteger());
-            } else if (isLetter(peek_char)) {
-                try tokens.append(self.readWord());
             } else if (isOperator(peek_char)) {
                 try tokens.append(self.readOperator());
+            } else if (isLetter(peek_char)) {
+                try tokens.append(self.readWord());
             } else {
                 return error.UnknownCharacter;
             }
