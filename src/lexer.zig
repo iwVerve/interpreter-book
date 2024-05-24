@@ -2,6 +2,8 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
+const Config = @import("Config.zig");
+
 const TokenImpl = @import("token.zig");
 const Token = TokenImpl.Token;
 const operators = TokenImpl.operators;
@@ -62,7 +64,7 @@ pub const Lexer = struct {
         }
 
         const integer_string = self.source[integer_start..self.position];
-        const integer = try std.fmt.parseInt(u32, integer_string, 10);
+        const integer = try std.fmt.parseInt(Config.integer_type, integer_string, 10);
 
         return .{ .integer = integer };
     }

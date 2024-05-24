@@ -1,6 +1,8 @@
+pub const Config = @import("Config.zig");
+
 pub const Token = union(enum) {
     identifier: []const u8,
-    integer: u32,
+    integer: Config.integer_type,
 
     assign,
     plus,
