@@ -10,8 +10,8 @@ const operators = TokenImpl.operators;
 const keywords = TokenImpl.keywords;
 
 pub const Lexer = struct {
-    source: []const u8,
-    position: u32 = 0,
+    source: []const u8 = undefined,
+    position: u32 = undefined,
     allocator: Allocator,
 
     fn peek(self: Lexer) ?u8 {
@@ -171,7 +171,10 @@ pub const Lexer = struct {
         return null;
     }
 
-    pub fn lex(self: *Lexer) !ArrayList(Token) {
+    /// Returned tokens point to memory in `source`.
+    pub fn lex(self: *Lexer, source: []const u8) !ArrayList(Token) {
+        self.source = source;
+        self.position = 0;
         var tokens = ArrayList(Token).init(self.allocator);
 
         while (self.peek()) |peek_char| {

@@ -17,8 +17,8 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var lexer = Lexer{ .source = source, .allocator = allocator };
-    const tokens = try lexer.lex();
+    var lexer = Lexer{ .allocator = allocator };
+    const tokens = try lexer.lex(source);
     defer tokens.deinit();
 
     const stdout = std.io.getStdOut();
