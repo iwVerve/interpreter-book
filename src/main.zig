@@ -21,7 +21,11 @@ pub fn main() !void {
     const tokens = try lexer.lex();
     defer tokens.deinit();
 
+    const stdout = std.io.getStdOut();
+    const writer = stdout.writer();
+
     for (tokens.items) |token| {
-        std.debug.print("{any}\n", .{token});
+        try token.serialize(writer);
+        _ = try writer.write("\n");
     }
 }

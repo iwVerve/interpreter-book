@@ -32,6 +32,31 @@ pub const Token = union(enum) {
     if_,
     else_,
     return_,
+
+    pub fn serialize(self: Token, writer: anytype) !void {
+        if (self == .identifier) {
+            try writer.print("{s}", .{self.identifier});
+            return;
+        }
+        if (self == .integer) {
+            try writer.print("{}", .{self.integer});
+            return;
+        }
+        inline for (operators) |operator| {
+            if (self == operator[1]) {
+                try writer.print("{s}", .{operator[0]});
+                return;
+            }
+        }
+        inline for (keywords) |keyword| {
+            if (self == keyword[1]) {
+                try writer.print("{s}", .{keyword[0]});
+                return;
+            }
+        }
+        try writer.print("?", .{});
+        return;
+    }
 };
 
 pub const operators = .{
