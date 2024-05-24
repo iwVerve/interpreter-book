@@ -1,7 +1,4 @@
 pub const Token = union(enum) {
-    illegal,
-    eof,
-
     identifier: []const u8,
     integer: u32,
 
