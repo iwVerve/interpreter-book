@@ -172,7 +172,8 @@ pub const Lexer = struct {
     }
 
     /// Returned tokens point to memory in `source`.
-    pub fn lex(self: *Lexer, source: []const u8) !ArrayList(Token) {
+    /// Caller owns returned memory.
+    pub fn lex(self: *Lexer, source: []const u8) ![]Token {
         self.source = source;
         self.position = 0;
         var tokens = ArrayList(Token).init(self.allocator);
@@ -191,6 +192,6 @@ pub const Lexer = struct {
             }
         }
 
-        return tokens;
+        return try tokens.toOwnedSlice();
     }
 };
