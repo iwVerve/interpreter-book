@@ -17,7 +17,10 @@ pub fn main() !void {
     defer allocator.free(tokens);
 
     var parser = Parser{ .allocator = allocator };
-    const program = try parser.parse(tokens);
+    var program = try parser.parse(tokens);
+    defer program.deinit(allocator);
 
-    std.debug.print("{any}\n", .{program});
+    const stdout = std.io.getStdOut();
+    const writer = stdout.writer();
+    try program.write(writer);
 }

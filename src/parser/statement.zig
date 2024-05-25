@@ -6,12 +6,12 @@ const Ast = @import("../ast.zig");
 
 pub fn parseLetStatement(self: *Parser) !Ast.Statement {
     self.advance(); // .let token
+
     const identifier = try self.parseIdentifier();
-    _ = identifier;
-
     try self.expectNext(.assign);
+    const expression = try self.parseInteger();
 
-    return error.Todo;
+    return .{ .let = .{ .identifier = identifier.identifier, .expression = expression } };
 }
 
 pub fn parseStatement(self: *Parser) !?Ast.Statement {

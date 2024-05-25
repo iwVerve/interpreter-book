@@ -8,3 +8,11 @@ pub fn parseIdentifier(self: *Parser) !Ast.Expression {
     }
     return .{ .identifier = .{ .name = token.identifier } };
 }
+
+pub fn parseInteger(self: *Parser) !Ast.Expression {
+    const token = self.next() orelse return error.SuddenEOF;
+    if (token != .integer) {
+        return error.ExpectedInteger;
+    }
+    return .{ .integer = token.integer };
+}

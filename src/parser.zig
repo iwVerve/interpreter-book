@@ -33,6 +33,7 @@ pub const Parser = struct {
 
     const ExpressionImpl = @import("parser/expression.zig");
     pub const parseIdentifier = ExpressionImpl.parseIdentifier;
+    pub const parseInteger = ExpressionImpl.parseInteger;
 
     pub fn expectNext(self: *Parser, comptime expect: Token) !void {
         const token = self.next() orelse return error.SuddenEOF;
