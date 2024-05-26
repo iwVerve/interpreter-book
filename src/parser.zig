@@ -52,11 +52,13 @@ pub const Parser = struct {
         }
     }
 
+    /// Caller owns returned memory.
     pub fn parse(self: *Parser, source: []const Token) !Ast.Statement {
         self.source = source;
         self.position = 0;
 
-        const program = try self.parseStatements();
+        var program = try self.parseStatements();
+        errdefer program.deinit(self.allocator);
 
         if (self.position < self.source.len) {
             return error.ParserEndedEarly;
