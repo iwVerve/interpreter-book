@@ -29,6 +29,7 @@ pub const Parser = struct {
 
     const StatementImpl = @import("parser/statement.zig");
     pub const parseLetStatement = StatementImpl.parseLetStatement;
+    pub const parseReturnStatement = StatementImpl.parseReturnStatement;
     pub const parseStatement = StatementImpl.parseStatement;
     pub const parseStatements = StatementImpl.parseStatements;
 
@@ -44,8 +45,8 @@ pub const Parser = struct {
         }
     }
 
-    pub fn assertNext(self: *Parser, comptime expect: TokenTag) !void {
-        const token = self.next() orelse return error.SuddenEOF;
+    pub fn assertNext(self: *Parser, comptime expect: TokenTag) void {
+        const token = self.next() orelse unreachable;
         if (token != expect) {
             unreachable;
         }
@@ -55,6 +56,12 @@ pub const Parser = struct {
         self.source = source;
         self.position = 0;
 
-        return try self.parseStatements();
+        const program = try self.parseStatements();
+
+        if (self.position < self.source.len) {
+            return error.ParserEndedEarly;
+        }
+
+        return program;
     }
 };

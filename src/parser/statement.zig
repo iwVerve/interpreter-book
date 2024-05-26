@@ -5,13 +5,23 @@ const Parser = @import("../parser.zig").Parser;
 const Ast = @import("../ast.zig");
 
 pub fn parseLetStatement(self: *Parser) !Ast.Statement {
-    try self.assertNext(.let);
+    self.assertNext(.let);
 
     const identifier = try self.parseIdentifier();
     try self.expectNext(.assign);
     const expression = try self.parseExpression();
+    try self.expectNext(.semicolon);
 
     return .{ .let = .{ .identifier = identifier.identifier, .expression = expression } };
+}
+
+pub fn parseReturnStatement(self: *Parser) !Ast.Statement {
+    self.assertNext(.return_);
+
+    const expression = try self.parseExpression();
+    try self.expectNext(.semicolon);
+
+    return .{ .return_ = .{ .expression = expression } };
 }
 
 pub fn parseStatement(self: *Parser) !?Ast.Statement {
@@ -19,6 +29,7 @@ pub fn parseStatement(self: *Parser) !?Ast.Statement {
 
     return switch (token) {
         .let => try self.parseLetStatement(),
+        .return_ => try self.parseReturnStatement(),
         else => null,
     };
 }

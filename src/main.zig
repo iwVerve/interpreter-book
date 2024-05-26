@@ -6,6 +6,7 @@ const Parser = @import("parser.zig").Parser;
 pub fn main() !void {
     const source =
         \\let five = 5;
+        \\return 254;
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

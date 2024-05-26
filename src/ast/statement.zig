@@ -6,11 +6,13 @@ const ast = @import("../ast.zig");
 pub const Statement = union(enum) {
     block: BlockStatement,
     let: LetStatement,
+    return_: ReturnStatement,
 
     pub fn deinit(self: *Statement, allocator: Allocator) void {
         switch (self.*) {
             .block => |*b| b.deinit(allocator),
             .let => |*l| l.deinit(allocator),
+            .return_ => |*r| r.deinit(allocator),
         }
     }
 
@@ -18,6 +20,7 @@ pub const Statement = union(enum) {
         switch (self) {
             .block => |b| try b.write(writer),
             .let => |l| try l.write(writer),
+            .return_ => |r| try r.write(writer),
         }
     }
 };
@@ -52,6 +55,20 @@ pub const LetStatement = struct {
         try writer.print("let ", .{});
         try self.identifier.write(writer);
         try writer.print(" = ", .{});
+        try self.expression.write(writer);
+        try writer.print(";", .{});
+    }
+};
+
+pub const ReturnStatement = struct {
+    expression: ast.Expression,
+
+    pub fn deinit(self: *ReturnStatement, allocator: Allocator) void {
+        self.expression.deinit(allocator);
+    }
+
+    pub fn write(self: ReturnStatement, writer: anytype) @TypeOf(writer).Error!void {
+        try writer.print("return ", .{});
         try self.expression.write(writer);
         try writer.print(";", .{});
     }
