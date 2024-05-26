@@ -16,3 +16,7 @@ pub fn parseInteger(self: *Parser) !Ast.Expression {
     }
     return .{ .integer = token.integer };
 }
+
+pub fn parseExpression(self: *Parser) !Ast.Expression {
+    return try self.parseInteger();
+}

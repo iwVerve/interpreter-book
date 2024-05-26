@@ -9,7 +9,7 @@ pub fn parseLetStatement(self: *Parser) !Ast.Statement {
 
     const identifier = try self.parseIdentifier();
     try self.expectNext(.assign);
-    const expression = try self.parseInteger();
+    const expression = try self.parseExpression();
 
     return .{ .let = .{ .identifier = identifier.identifier, .expression = expression } };
 }
