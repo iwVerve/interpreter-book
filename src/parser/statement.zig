@@ -30,7 +30,7 @@ pub fn parseStatement(self: *Parser) !?Ast.Statement {
     return switch (token) {
         .let => try self.parseLetStatement(),
         .return_ => try self.parseReturnStatement(),
-        else => null,
+        else => error.UnexpectedToken,
     };
 }
 

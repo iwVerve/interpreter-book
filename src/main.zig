@@ -6,7 +6,7 @@ const Parser = @import("parser.zig").Parser;
 pub fn main() !void {
     const source =
         \\let five = 5;
-        \\return 254;
+        \\return -254;
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -22,6 +22,10 @@ pub fn main() !void {
     defer program.deinit(allocator);
 
     const stdout = std.io.getStdOut();
-    const writer = stdout.writer();
+    const stdout_writer = stdout.writer();
+    var buffered_writer = std.io.bufferedWriter(stdout_writer);
+    const writer = buffered_writer.writer();
+
     try program.write(writer);
+    try buffered_writer.flush();
 }

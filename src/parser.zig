@@ -28,15 +28,10 @@ pub const Parser = struct {
     }
 
     const StatementImpl = @import("parser/statement.zig");
-    pub const parseLetStatement = StatementImpl.parseLetStatement;
-    pub const parseReturnStatement = StatementImpl.parseReturnStatement;
-    pub const parseStatement = StatementImpl.parseStatement;
-    pub const parseStatements = StatementImpl.parseStatements;
+    pub usingnamespace StatementImpl;
 
     const ExpressionImpl = @import("parser/expression.zig");
-    pub const parseIdentifier = ExpressionImpl.parseIdentifier;
-    pub const parseInteger = ExpressionImpl.parseInteger;
-    pub const parseExpression = ExpressionImpl.parseExpression;
+    pub usingnamespace ExpressionImpl;
 
     pub fn expectNext(self: *Parser, comptime expect: TokenTag) !void {
         const token = self.next() orelse return error.SuddenEOF;

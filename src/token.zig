@@ -32,7 +32,7 @@ pub const Token = union(enum) {
     else_,
     return_,
 
-    pub fn serialize(self: Token, writer: anytype) !void {
+    pub fn write(self: Token, writer: anytype) !void {
         if (self == .identifier) {
             try writer.print("{s}", .{self.identifier});
             return;

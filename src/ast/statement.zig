@@ -29,10 +29,13 @@ pub const BlockStatement = struct {
     statements: []Statement,
 
     pub fn deinit(self: *BlockStatement, allocator: Allocator) void {
+        for (self.statements) |*statement| {
+            statement.deinit(allocator);
+        }
         allocator.free(self.statements);
     }
 
-    pub fn write(self: BlockStatement, writer: anytype) @TypeOf(writer).Error!void {
+    pub fn write(self: BlockStatement, writer: anytype) !void {
         try writer.print("{{\n", .{});
         for (self.statements) |statement| {
             try statement.write(writer);
@@ -47,11 +50,10 @@ pub const LetStatement = struct {
     expression: ast.Expression,
 
     pub fn deinit(self: *LetStatement, allocator: Allocator) void {
-        self.identifier.deinit(allocator);
         self.expression.deinit(allocator);
     }
 
-    pub fn write(self: LetStatement, writer: anytype) @TypeOf(writer).Error!void {
+    pub fn write(self: LetStatement, writer: anytype) !void {
         try writer.print("let ", .{});
         try self.identifier.write(writer);
         try writer.print(" = ", .{});
@@ -67,7 +69,7 @@ pub const ReturnStatement = struct {
         self.expression.deinit(allocator);
     }
 
-    pub fn write(self: ReturnStatement, writer: anytype) @TypeOf(writer).Error!void {
+    pub fn write(self: ReturnStatement, writer: anytype) !void {
         try writer.print("return ", .{});
         try self.expression.write(writer);
         try writer.print(";", .{});
