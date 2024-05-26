@@ -61,8 +61,13 @@ pub fn parseInfixExpression(self: *Parser, left: Ast.Expression) !Ast.Expression
 
     const left_ptr = try self.allocator.create(Ast.Expression);
     left_ptr.* = left;
+    errdefer {
+        left_ptr.deinit(self.allocator);
+        self.allocator.destroy(left_ptr);
+    }
 
     const right = try self.allocator.create(Ast.Expression);
+    errdefer self.allocator.destroy(right);
     right.* = try self.parseExpressionPrecedence(precedence);
 
     return .{ .binary = .{ .left = left_ptr, .operator = operator, .right = right } };
@@ -88,6 +93,7 @@ pub fn getPrecedence(token: Token) ?Precedence {
 
 pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) ExpressionParseError!Ast.Expression {
     var left = try self.callPrefixFunction();
+    errdefer left.deinit(self.allocator);
 
     while (true) {
         const peek_token = self.peek() orelse break;

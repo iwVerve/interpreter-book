@@ -6,6 +6,7 @@ const Parser = @import("parser.zig").Parser;
 pub fn main() !void {
     const source =
         \\let result = 1 * 2 + 3 * 4;
+        \\let swap = (1 + 2) * (3 + 4);
         \\return result;
     ;
 

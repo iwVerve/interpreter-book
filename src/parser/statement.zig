@@ -36,6 +36,12 @@ pub fn parseStatement(self: *Parser) !?Ast.Statement {
 
 pub fn parseStatements(self: *Parser) !Ast.Statement {
     var statements = ArrayList(Ast.Statement).init(self.allocator);
+    errdefer {
+        for (statements.items) |*statement| {
+            statement.deinit(self.allocator);
+        }
+        statements.deinit();
+    }
 
     while (true) {
         const statement = try self.parseStatement() orelse break;
