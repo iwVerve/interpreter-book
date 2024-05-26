@@ -1,7 +1,8 @@
 const Parser = @import("../parser.zig").Parser;
 const Ast = @import("../ast.zig");
+const Token = @import("../token.zig").Token;
 
-const Priority = enum {
+const Precedence = enum {
     lowest,
     equality,
     comparison,
@@ -40,7 +41,7 @@ pub fn parsePrefixExpression(self: *Parser) !Ast.Expression {
     const operator = self.next() orelse unreachable;
 
     const expression = try self.allocator.create(Ast.Expression);
-    expression.* = try self.parseExpressionPriority(.prefix);
+    expression.* = try self.parseExpressionPrecedence(.prefix);
     return .{ .unary = .{ .operator = operator, .expression = expression } };
 }
 
@@ -49,24 +50,57 @@ pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
     return switch (peek) {
         .identifier => self.parseIdentifier(),
         .integer => self.parseInteger(),
-        .plus, .minus => self.parsePrefixExpression(),
+        .minus, .bang => self.parsePrefixExpression(),
         else => error.UnexpectedToken,
     };
 }
 
-pub fn callInfixFunction(self: *Parser, left: Ast.Expression) !Ast.Expression {
-    _ = self;
-    _ = left;
+pub fn parseInfixExpression(self: *Parser, left: Ast.Expression) !Ast.Expression {
+    const operator = self.next() orelse unreachable;
+    const precedence = getPrecedence(operator) orelse unreachable;
+
+    const left_ptr = try self.allocator.create(Ast.Expression);
+    left_ptr.* = left;
+
+    const right = try self.allocator.create(Ast.Expression);
+    right.* = try self.parseExpressionPrecedence(precedence);
+
+    return .{ .binary = .{ .left = left_ptr, .operator = operator, .right = right } };
 }
 
-pub fn parseExpressionPriority(self: *Parser, priority: Priority) ExpressionParseError!Ast.Expression {
-    const left = try self.callPrefixFunction();
+pub fn callInfixFunction(self: *Parser, left: Ast.Expression) !Ast.Expression {
+    const peek = self.peek() orelse unreachable;
+    return switch (peek) {
+        .equal, .not_equal, .greater_than, .less_than, .plus, .minus, .asterisk, .slash => self.parseInfixExpression(left),
+        else => unreachable,
+    };
+}
 
-    _ = priority;
+pub fn getPrecedence(token: Token) ?Precedence {
+    return switch (token) {
+        .equal, .not_equal => .equality,
+        .greater_than, .less_than => .comparison,
+        .plus, .minus => .addition,
+        .asterisk, .slash => .multiplication,
+        else => null,
+    };
+}
+
+pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) ExpressionParseError!Ast.Expression {
+    var left = try self.callPrefixFunction();
+
+    while (true) {
+        const peek_token = self.peek() orelse break;
+        const peek_precedence = getPrecedence(peek_token) orelse break;
+        if (@intFromEnum(peek_precedence) < @intFromEnum(min_precedence)) {
+            break;
+        }
+        left = try self.callInfixFunction(left);
+    }
 
     return left;
 }
 
 pub fn parseExpression(self: *Parser) !Ast.Expression {
-    return try self.parseExpressionPriority(.lowest);
+    return try self.parseExpressionPrecedence(.lowest);
 }
