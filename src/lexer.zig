@@ -177,6 +177,7 @@ pub const Lexer = struct {
         self.source = source;
         self.position = 0;
         var tokens = ArrayList(Token).init(self.allocator);
+        errdefer tokens.deinit();
 
         while (self.peek()) |peek_char| {
             if (isWhitespace(peek_char)) {
