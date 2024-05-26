@@ -2,6 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Token = @import("token.zig").Token;
+const TokenTag = @typeInfo(Token).Union.tag_type.?;
 const Ast = @import("ast.zig");
 
 pub const Parser = struct {
@@ -36,10 +37,9 @@ pub const Parser = struct {
     pub const parseInteger = ExpressionImpl.parseInteger;
     pub const parseExpression = ExpressionImpl.parseExpression;
 
-    pub fn expectNext(self: *Parser, comptime expect: Token) !void {
+    pub fn expectNext(self: *Parser, comptime expect: TokenTag) !void {
         const token = self.next() orelse return error.SuddenEOF;
-        // @intFromEnum call possibly not ideal
-        if (@intFromEnum(token) != @intFromEnum(expect)) {
+        if (token != expect) {
             return error.UnexpectedToken;
         }
     }
