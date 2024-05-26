@@ -5,7 +5,7 @@ const Parser = @import("../parser.zig").Parser;
 const Ast = @import("../ast.zig");
 
 pub fn parseLetStatement(self: *Parser) !Ast.Statement {
-    self.advance(); // .let token
+    try self.assertNext(.let);
 
     const identifier = try self.parseIdentifier();
     try self.expectNext(.assign);

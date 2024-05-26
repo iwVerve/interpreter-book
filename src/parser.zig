@@ -44,6 +44,13 @@ pub const Parser = struct {
         }
     }
 
+    pub fn assertNext(self: *Parser, comptime expect: TokenTag) !void {
+        const token = self.next() orelse return error.SuddenEOF;
+        if (token != expect) {
+            unreachable;
+        }
+    }
+
     pub fn parse(self: *Parser, source: []const Token) !Ast.Statement {
         self.source = source;
         self.position = 0;
