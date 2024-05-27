@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
+const ast = @import("../ast.zig");
+
 const Config = @import("../Config.zig");
 const Token = @import("../token.zig").Token;
 const ExpressionParser = @import("../parser/expression.zig");
@@ -10,6 +12,7 @@ const getPrecedence = ExpressionParser.getPrecedence;
 pub const Expression = union(enum) {
     binary: BinaryExpression,
     unary: UnaryExpression,
+    if_: IfExpression,
     identifier: Identifier,
     integer: Config.integer_type,
     bool_: bool,
@@ -18,6 +21,7 @@ pub const Expression = union(enum) {
         switch (self.*) {
             .binary => |*b| b.deinit(allocator),
             .unary => |*u| u.deinit(allocator),
+            .if_ => |*i| i.deinit(allocator),
             .integer, .identifier, .bool_ => {},
         }
     }
@@ -26,6 +30,7 @@ pub const Expression = union(enum) {
         switch (self) {
             .binary => |b| try b.write(writer, precedence),
             .unary => |u| try u.write(writer),
+            .if_ => |i| try i.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
             .bool_ => |b| try writer.print("{}", .{b}),
@@ -75,6 +80,34 @@ pub const UnaryExpression = struct {
     pub fn write(self: UnaryExpression, writer: anytype) !void {
         try self.operator.write(writer);
         try self.expression.write(writer, .prefix);
+    }
+};
+
+pub const IfExpression = struct {
+    condition: *Expression,
+    then: *ast.Statement,
+    else_: ?*ast.Statement,
+
+    pub fn deinit(self: *IfExpression, allocator: Allocator) void {
+        self.condition.deinit(allocator);
+        allocator.destroy(self.condition);
+        self.then.deinit(allocator);
+        allocator.destroy(self.then);
+        if (self.else_ != null) {
+            self.else_.?.deinit(allocator);
+            allocator.destroy(self.else_.?);
+        }
+    }
+
+    pub fn write(self: IfExpression, writer: anytype) !void {
+        try writer.print("if ", .{});
+        try self.condition.write(writer, .lowest);
+        try writer.print(" ", .{});
+        try self.then.write(writer);
+        if (self.else_ != null) {
+            try writer.print("else ", .{});
+            try self.else_.?.write(writer);
+        }
     }
 };
 

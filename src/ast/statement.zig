@@ -7,12 +7,14 @@ pub const Statement = union(enum) {
     block: BlockStatement,
     let: LetStatement,
     return_: ReturnStatement,
+    expression: ast.Expression,
 
     pub fn deinit(self: *Statement, allocator: Allocator) void {
         switch (self.*) {
             .block => |*b| b.deinit(allocator),
             .let => |*l| l.deinit(allocator),
             .return_ => |*r| r.deinit(allocator),
+            .expression => |*e| e.deinit(allocator),
         }
     }
 
@@ -21,6 +23,7 @@ pub const Statement = union(enum) {
             .block => |b| try b.write(writer),
             .let => |l| try l.write(writer),
             .return_ => |r| try r.write(writer),
+            .expression => |e| try e.write(writer, .lowest),
         }
     }
 };

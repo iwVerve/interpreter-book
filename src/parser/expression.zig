@@ -64,6 +64,36 @@ pub fn parseGroupedExpression(self: *Parser) !Ast.Expression {
     return expression;
 }
 
+pub fn parseIfExpression(self: *Parser) !Ast.Expression {
+    self.assertNext(.if_);
+
+    const condition = try self.allocator.create(Ast.Expression);
+    errdefer self.allocator.destroy(condition);
+    condition.* = try self.parseExpression();
+    errdefer condition.deinit(self.allocator);
+
+    const then = try self.allocator.create(Ast.Statement);
+    errdefer self.allocator.destroy(then);
+    then.* = try self.parseStatement() orelse return error.UnexpectedToken;
+    errdefer then.*.deinit(self.allocator);
+
+    var else_: ?*Ast.Statement = null;
+    errdefer {
+        if (else_ != null) {
+            self.allocator.destroy(else_.?);
+        }
+    }
+    if (self.peek()) |peek| {
+        if (peek == .else_) {
+            else_ = try self.allocator.create(Ast.Statement);
+            self.advance();
+            else_.?.* = try self.parseStatement() orelse return error.UnexpectedToken;
+        }
+    }
+
+    return .{ .if_ = .{ .condition = condition, .then = then, .else_ = else_ } };
+}
+
 pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
     const peek = self.peek() orelse return error.SuddenEOF;
     return switch (peek) {
@@ -72,6 +102,7 @@ pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
         .true, .false => self.parseBoolean(),
         .minus, .bang => self.parsePrefixExpression(),
         .paren_l => self.parseGroupedExpression(),
+        .if_ => self.parseIfExpression(),
         else => error.UnexpectedToken,
     };
 }

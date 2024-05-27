@@ -7,6 +7,12 @@ pub fn main() !void {
     const source =
         \\let result = -1 * true + 3 * -4;
         \\let swap = (1 + -2) * -(-false + 4);
+        \\if (x > y) {
+        \\  return true;
+        \\}
+        \\else {
+        \\  return false;
+        \\}
         \\return result;
     ;
 

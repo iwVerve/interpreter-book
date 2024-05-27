@@ -4,6 +4,16 @@ const ArrayList = std.ArrayList;
 const Parser = @import("../parser.zig").Parser;
 const Ast = @import("../ast.zig");
 
+const ParseStatementError = error{
+    SuddenEOF,
+    UnexpectedToken,
+    ExpectedInteger,
+    ExpectedIdentifier,
+    ExpectedBoolean,
+
+    OutOfMemory,
+};
+
 pub fn parseLetStatement(self: *Parser) !Ast.Statement {
     self.assertNext(.let);
 
@@ -25,13 +35,30 @@ pub fn parseReturnStatement(self: *Parser) !Ast.Statement {
     return .{ .return_ = .{ .expression = expression } };
 }
 
-pub fn parseStatement(self: *Parser) !?Ast.Statement {
+pub fn parseGroupedStatements(self: *Parser) !Ast.Statement {
+    self.assertNext(.brace_l);
+
+    var statements = try self.parseStatements();
+    errdefer statements.deinit(self.allocator);
+    try self.expectNext(.brace_r);
+
+    return statements;
+}
+
+pub fn parseExpressionStatement(self: *Parser) !Ast.Statement {
+    const expression = try self.parseExpression();
+    return .{ .expression = expression };
+}
+
+pub fn parseStatement(self: *Parser) ParseStatementError!?Ast.Statement {
     const token = self.peek() orelse return null;
 
     return switch (token) {
         .let => try self.parseLetStatement(),
         .return_ => try self.parseReturnStatement(),
-        else => error.UnexpectedToken,
+        .brace_l => try self.parseGroupedStatements(),
+        .brace_r => null,
+        else => try self.parseExpressionStatement(),
     };
 }
 
