@@ -17,6 +17,7 @@ const ExpressionParseError = error{
     UnexpectedToken,
     ExpectedIdentifier,
     ExpectedInteger,
+    ExpectedBoolean,
 
     OutOfMemory,
 };
@@ -30,11 +31,19 @@ pub fn parseIdentifier(self: *Parser) !Ast.Expression {
 }
 
 pub fn parseInteger(self: *Parser) !Ast.Expression {
-    const token = self.next() orelse return error.SuddenEOF;
+    const token = self.next() orelse unreachable;
     if (token != .integer) {
         return error.ExpectedInteger;
     }
     return .{ .integer = token.integer };
+}
+
+pub fn parseBoolean(self: *Parser) !Ast.Expression {
+    const token = self.next() orelse unreachable;
+    if (token != .true and token != .false) {
+        return error.ExpectedBoolean;
+    }
+    return .{ .bool_ = (token == .true) };
 }
 
 pub fn parsePrefixExpression(self: *Parser) !Ast.Expression {
@@ -60,6 +69,7 @@ pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
     return switch (peek) {
         .identifier => self.parseIdentifier(),
         .integer => self.parseInteger(),
+        .true, .false => self.parseBoolean(),
         .minus, .bang => self.parsePrefixExpression(),
         .paren_l => self.parseGroupedExpression(),
         else => error.UnexpectedToken,

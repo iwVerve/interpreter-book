@@ -12,12 +12,13 @@ pub const Expression = union(enum) {
     unary: UnaryExpression,
     identifier: Identifier,
     integer: Config.integer_type,
+    bool_: bool,
 
     pub fn deinit(self: *Expression, allocator: Allocator) void {
         switch (self.*) {
             .binary => |*b| b.deinit(allocator),
             .unary => |*u| u.deinit(allocator),
-            .integer, .identifier => {},
+            .integer, .identifier, .bool_ => {},
         }
     }
 
@@ -27,6 +28,7 @@ pub const Expression = union(enum) {
             .unary => |u| try u.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
+            .bool_ => |b| try writer.print("{}", .{b}),
         }
     }
 };
