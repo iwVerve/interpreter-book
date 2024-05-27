@@ -1,5 +1,9 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+
 pub const Config = @import("Config.zig");
 
+/// Owns own memory
 pub const Token = union(enum) {
     identifier: []const u8,
     integer: Config.integer_type,
@@ -31,6 +35,12 @@ pub const Token = union(enum) {
     if_,
     else_,
     return_,
+
+    pub fn deinit(self: *Token, allocator: Allocator) void {
+        if (self.* == .identifier) {
+            allocator.free(self.identifier);
+        }
+    }
 
     pub fn write(self: Token, writer: anytype) !void {
         if (self == .identifier) {

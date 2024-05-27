@@ -142,7 +142,7 @@ pub const Lexer = struct {
         };
     }
 
-    fn readWord(self: *Lexer) Token {
+    fn readWord(self: *Lexer) !Token {
         const word_start = self.position;
 
         while (self.peek()) |peek_char| {
@@ -158,7 +158,10 @@ pub const Lexer = struct {
             return keyword;
         }
 
-        return .{ .identifier = word };
+        const word_ptr = try self.allocator.alloc(u8, word.len);
+        @memcpy(word_ptr, word);
+
+        return .{ .identifier = word_ptr };
     }
 
     fn getKeyword(word: []const u8) ?Token {
@@ -171,7 +174,6 @@ pub const Lexer = struct {
         return null;
     }
 
-    /// Returned tokens point to memory in `source`.
     /// Caller owns returned memory.
     pub fn lex(self: *Lexer, source: []const u8) ![]Token {
         self.source = source;
@@ -187,7 +189,7 @@ pub const Lexer = struct {
             } else if (isOperator(peek_char)) {
                 try tokens.append(self.readOperator());
             } else if (isLetter(peek_char)) {
-                try tokens.append(self.readWord());
+                try tokens.append(try self.readWord());
             } else {
                 return error.UnknownCharacter;
             }

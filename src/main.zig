@@ -23,7 +23,12 @@ pub fn main() !void {
 
     var lexer = Lexer{ .allocator = allocator };
     const tokens = try lexer.lex(source);
-    defer allocator.free(tokens);
+    defer {
+        for (tokens) |*token| {
+            token.deinit(allocator);
+        }
+        allocator.free(tokens);
+    }
 
     var parser = Parser{ .allocator = allocator };
     var program = try parser.parse(tokens);
