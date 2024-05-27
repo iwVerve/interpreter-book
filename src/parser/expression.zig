@@ -2,7 +2,7 @@ const Parser = @import("../parser.zig").Parser;
 const Ast = @import("../ast.zig");
 const Token = @import("../token.zig").Token;
 
-const Precedence = enum {
+pub const Precedence = enum {
     lowest,
     equality,
     comparison,
@@ -45,12 +45,23 @@ pub fn parsePrefixExpression(self: *Parser) !Ast.Expression {
     return .{ .unary = .{ .operator = operator, .expression = expression } };
 }
 
+pub fn parseGroupedExpression(self: *Parser) !Ast.Expression {
+    self.assertNext(.paren_l);
+
+    var expression = try self.parseExpression();
+    errdefer expression.deinit(self.allocator);
+
+    try self.expectNext(.paren_r);
+    return expression;
+}
+
 pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
     const peek = self.peek() orelse return error.SuddenEOF;
     return switch (peek) {
         .identifier => self.parseIdentifier(),
         .integer => self.parseInteger(),
         .minus, .bang => self.parsePrefixExpression(),
+        .paren_l => self.parseGroupedExpression(),
         else => error.UnexpectedToken,
     };
 }
@@ -60,11 +71,8 @@ pub fn parseInfixExpression(self: *Parser, left: Ast.Expression) !Ast.Expression
     const precedence = getPrecedence(operator) orelse unreachable;
 
     const left_ptr = try self.allocator.create(Ast.Expression);
+    errdefer self.allocator.destroy(left_ptr);
     left_ptr.* = left;
-    errdefer {
-        left_ptr.deinit(self.allocator);
-        self.allocator.destroy(left_ptr);
-    }
 
     const right = try self.allocator.create(Ast.Expression);
     errdefer self.allocator.destroy(right);
@@ -75,7 +83,7 @@ pub fn parseInfixExpression(self: *Parser, left: Ast.Expression) !Ast.Expression
 
 pub fn callInfixFunction(self: *Parser, left: Ast.Expression) !Ast.Expression {
     const peek = self.peek() orelse unreachable;
-    return switch (peek) {
+    return try switch (peek) {
         .equal, .not_equal, .greater_than, .less_than, .plus, .minus, .asterisk, .slash => self.parseInfixExpression(left),
         else => unreachable,
     };

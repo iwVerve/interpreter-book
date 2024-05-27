@@ -9,7 +9,8 @@ pub fn parseLetStatement(self: *Parser) !Ast.Statement {
 
     const identifier = try self.parseIdentifier();
     try self.expectNext(.assign);
-    const expression = try self.parseExpression();
+    var expression = try self.parseExpression();
+    errdefer expression.deinit(self.allocator);
     try self.expectNext(.semicolon);
 
     return .{ .let = .{ .identifier = identifier.identifier, .expression = expression } };

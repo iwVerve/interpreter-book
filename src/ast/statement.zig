@@ -57,7 +57,7 @@ pub const LetStatement = struct {
         try writer.print("let ", .{});
         try self.identifier.write(writer);
         try writer.print(" = ", .{});
-        try self.expression.write(writer);
+        try self.expression.write(writer, .lowest);
         try writer.print(";", .{});
     }
 };
@@ -71,7 +71,7 @@ pub const ReturnStatement = struct {
 
     pub fn write(self: ReturnStatement, writer: anytype) !void {
         try writer.print("return ", .{});
-        try self.expression.write(writer);
+        try self.expression.write(writer, .lowest);
         try writer.print(";", .{});
     }
 };

@@ -2,10 +2,10 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Config = @import("../Config.zig");
-
 const Token = @import("../token.zig").Token;
-
-const ExpressionWriteError = error{};
+const ExpressionParser = @import("../parser/expression.zig");
+const Precedence = ExpressionParser.Precedence;
+const getPrecedence = ExpressionParser.getPrecedence;
 
 pub const Expression = union(enum) {
     binary: BinaryExpression,
@@ -21,9 +21,9 @@ pub const Expression = union(enum) {
         }
     }
 
-    pub fn write(self: Expression, writer: anytype) @TypeOf(writer).Error!void {
+    pub fn write(self: Expression, writer: anytype, precedence: Precedence) @TypeOf(writer).Error!void {
         switch (self) {
-            .binary => |b| try b.write(writer),
+            .binary => |b| try b.write(writer, precedence),
             .unary => |u| try u.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
@@ -43,14 +43,21 @@ pub const BinaryExpression = struct {
         allocator.destroy(self.right);
     }
 
-    pub fn write(self: BinaryExpression, writer: anytype) !void {
-        try writer.print("(", .{});
-        try self.left.write(writer);
+    pub fn write(self: BinaryExpression, writer: anytype, precedence: Precedence) !void {
+        const my_precedence = getPrecedence(self.operator) orelse unreachable;
+        const surround = @intFromEnum(my_precedence) < @intFromEnum(precedence);
+
+        if (surround) {
+            try writer.print("(", .{});
+        }
+        try self.left.write(writer, my_precedence);
         try writer.print(" ", .{});
         try self.operator.write(writer);
         try writer.print(" ", .{});
-        try self.right.write(writer);
-        try writer.print(")", .{});
+        try self.right.write(writer, my_precedence);
+        if (surround) {
+            try writer.print(")", .{});
+        }
     }
 };
 
@@ -65,7 +72,7 @@ pub const UnaryExpression = struct {
 
     pub fn write(self: UnaryExpression, writer: anytype) !void {
         try self.operator.write(writer);
-        try self.expression.write(writer);
+        try self.expression.write(writer, .prefix);
     }
 };
 
