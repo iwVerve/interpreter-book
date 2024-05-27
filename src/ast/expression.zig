@@ -13,6 +13,8 @@ pub const Expression = union(enum) {
     binary: BinaryExpression,
     unary: UnaryExpression,
     if_: IfExpression,
+    function: FunctionExpression,
+    call: CallExpression,
     identifier: Identifier,
     integer: Config.integer_type,
     bool_: bool,
@@ -22,6 +24,8 @@ pub const Expression = union(enum) {
             .binary => |*b| b.deinit(allocator),
             .unary => |*u| u.deinit(allocator),
             .if_ => |*i| i.deinit(allocator),
+            .function => |*f| f.deinit(allocator),
+            .call => |*c| c.deinit(allocator),
             .integer, .identifier, .bool_ => {},
         }
     }
@@ -31,6 +35,8 @@ pub const Expression = union(enum) {
             .binary => |b| try b.write(writer, precedence),
             .unary => |u| try u.write(writer),
             .if_ => |i| try i.write(writer),
+            .function => |f| try f.write(writer),
+            .call => |c| try c.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
             .bool_ => |b| try writer.print("{}", .{b}),
@@ -108,6 +114,61 @@ pub const IfExpression = struct {
             try writer.print("else ", .{});
             try self.else_.?.write(writer);
         }
+    }
+};
+
+pub const FunctionExpression = struct {
+    parameters: []const []const u8,
+    body: *ast.Statement,
+
+    pub fn deinit(self: *FunctionExpression, allocator: Allocator) void {
+        allocator.free(self.parameters);
+        self.body.deinit(allocator);
+        allocator.destroy(self.body);
+    }
+
+    pub fn write(self: FunctionExpression, writer: anytype) !void {
+        try writer.print("fn(", .{});
+        var first = true;
+        for (self.parameters) |parameter| {
+            if (first) {
+                first = false;
+            } else {
+                try writer.print(", ", .{});
+            }
+            try writer.print("{s}", .{parameter});
+        }
+        try writer.print(") ", .{});
+        try self.body.write(writer);
+    }
+};
+
+pub const CallExpression = struct {
+    function: *Expression,
+    arguments: []Expression,
+
+    pub fn deinit(self: *CallExpression, allocator: Allocator) void {
+        self.function.deinit(allocator);
+        allocator.destroy(self.function);
+        for (self.arguments) |*argument| {
+            argument.deinit(allocator);
+        }
+        allocator.free(self.arguments);
+    }
+
+    pub fn write(self: CallExpression, writer: anytype) !void {
+        try self.function.write(writer, .lowest);
+        try writer.print("(", .{});
+        var first = true;
+        for (self.arguments) |argument| {
+            if (first) {
+                first = false;
+            } else {
+                try writer.print(", ", .{});
+            }
+            try argument.write(writer, .lowest);
+        }
+        try writer.print(")", .{});
     }
 };
 

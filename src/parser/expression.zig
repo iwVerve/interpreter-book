@@ -1,5 +1,8 @@
+const std = @import("std");
+const ArrayList = std.ArrayList;
+
 const Parser = @import("../parser.zig").Parser;
-const Ast = @import("../ast.zig");
+const ast = @import("../ast.zig");
 const Token = @import("../token.zig").Token;
 
 pub const Precedence = enum {
@@ -22,7 +25,7 @@ const ExpressionParseError = error{
     OutOfMemory,
 };
 
-pub fn parseIdentifier(self: *Parser) !Ast.Expression {
+pub fn parseIdentifier(self: *Parser) !ast.Expression {
     const token = self.next() orelse return error.SuddenEOF;
     if (token != .identifier) {
         return error.ExpectedIdentifier;
@@ -30,7 +33,7 @@ pub fn parseIdentifier(self: *Parser) !Ast.Expression {
     return .{ .identifier = .{ .name = token.identifier } };
 }
 
-pub fn parseInteger(self: *Parser) !Ast.Expression {
+pub fn parseInteger(self: *Parser) !ast.Expression {
     const token = self.next() orelse unreachable;
     if (token != .integer) {
         return error.ExpectedInteger;
@@ -38,7 +41,7 @@ pub fn parseInteger(self: *Parser) !Ast.Expression {
     return .{ .integer = token.integer };
 }
 
-pub fn parseBoolean(self: *Parser) !Ast.Expression {
+pub fn parseBoolean(self: *Parser) !ast.Expression {
     const token = self.next() orelse unreachable;
     if (token != .true and token != .false) {
         return error.ExpectedBoolean;
@@ -46,15 +49,15 @@ pub fn parseBoolean(self: *Parser) !Ast.Expression {
     return .{ .bool_ = (token == .true) };
 }
 
-pub fn parsePrefixExpression(self: *Parser) !Ast.Expression {
+pub fn parsePrefixExpression(self: *Parser) !ast.Expression {
     const operator = self.next() orelse unreachable;
 
-    const expression = try self.allocator.create(Ast.Expression);
+    const expression = try self.allocator.create(ast.Expression);
     expression.* = try self.parseExpressionPrecedence(.prefix);
     return .{ .unary = .{ .operator = operator, .expression = expression } };
 }
 
-pub fn parseGroupedExpression(self: *Parser) !Ast.Expression {
+pub fn parseGroupedExpression(self: *Parser) !ast.Expression {
     self.assertNext(.paren_l);
 
     var expression = try self.parseExpression();
@@ -64,20 +67,20 @@ pub fn parseGroupedExpression(self: *Parser) !Ast.Expression {
     return expression;
 }
 
-pub fn parseIfExpression(self: *Parser) !Ast.Expression {
+pub fn parseIfExpression(self: *Parser) !ast.Expression {
     self.assertNext(.if_);
 
-    const condition = try self.allocator.create(Ast.Expression);
+    const condition = try self.allocator.create(ast.Expression);
     errdefer self.allocator.destroy(condition);
     condition.* = try self.parseExpression();
     errdefer condition.deinit(self.allocator);
 
-    const then = try self.allocator.create(Ast.Statement);
+    const then = try self.allocator.create(ast.Statement);
     errdefer self.allocator.destroy(then);
     then.* = try self.parseStatement() orelse return error.UnexpectedToken;
     errdefer then.*.deinit(self.allocator);
 
-    var else_: ?*Ast.Statement = null;
+    var else_: ?*ast.Statement = null;
     errdefer {
         if (else_ != null) {
             self.allocator.destroy(else_.?);
@@ -85,7 +88,7 @@ pub fn parseIfExpression(self: *Parser) !Ast.Expression {
     }
     if (self.peek()) |peek| {
         if (peek == .else_) {
-            else_ = try self.allocator.create(Ast.Statement);
+            else_ = try self.allocator.create(ast.Statement);
             self.advance();
             else_.?.* = try self.parseStatement() orelse return error.UnexpectedToken;
         }
@@ -94,7 +97,36 @@ pub fn parseIfExpression(self: *Parser) !Ast.Expression {
     return .{ .if_ = .{ .condition = condition, .then = then, .else_ = else_ } };
 }
 
-pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
+pub fn parseFunctionLiteral(self: *Parser) !ast.Expression {
+    self.assertNext(.function);
+    try self.expectNext(.paren_l);
+
+    var parameters = ArrayList([]const u8).init(self.allocator);
+    errdefer parameters.deinit();
+
+    while (true) {
+        const peek = self.peek() orelse return error.SuddenEOF;
+        if (peek != .identifier) {
+            break;
+        }
+        try parameters.append(peek.identifier);
+        self.advance();
+        const comma = self.peek() orelse return error.SuddenEOF;
+        if (comma != .comma) {
+            break;
+        }
+        self.advance();
+    }
+    try self.expectNext(.paren_r);
+
+    const body = try self.allocator.create(ast.Statement);
+    errdefer self.allocator.destroy(body);
+    body.* = try self.parseStatement() orelse return error.UnexpectedToken;
+
+    return .{ .function = .{ .parameters = try parameters.toOwnedSlice(), .body = body } };
+}
+
+pub fn callPrefixFunction(self: *Parser) !ast.Expression {
     const peek = self.peek() orelse return error.SuddenEOF;
     return switch (peek) {
         .identifier => self.parseIdentifier(),
@@ -103,29 +135,71 @@ pub fn callPrefixFunction(self: *Parser) !Ast.Expression {
         .minus, .bang => self.parsePrefixExpression(),
         .paren_l => self.parseGroupedExpression(),
         .if_ => self.parseIfExpression(),
+        .function => self.parseFunctionLiteral(),
         else => error.UnexpectedToken,
     };
 }
 
-pub fn parseInfixExpression(self: *Parser, left: Ast.Expression) !Ast.Expression {
+pub fn parseInfixExpression(self: *Parser, left: ast.Expression) !ast.Expression {
     const operator = self.next() orelse unreachable;
     const precedence = getPrecedence(operator) orelse unreachable;
 
-    const left_ptr = try self.allocator.create(Ast.Expression);
+    const left_ptr = try self.allocator.create(ast.Expression);
     errdefer self.allocator.destroy(left_ptr);
     left_ptr.* = left;
 
-    const right = try self.allocator.create(Ast.Expression);
+    const right = try self.allocator.create(ast.Expression);
     errdefer self.allocator.destroy(right);
     right.* = try self.parseExpressionPrecedence(precedence);
 
     return .{ .binary = .{ .left = left_ptr, .operator = operator, .right = right } };
 }
 
-pub fn callInfixFunction(self: *Parser, left: Ast.Expression) !Ast.Expression {
+pub fn parseCallExpression(self: *Parser, left: ast.Expression) !ast.Expression {
+    self.assertNext(.paren_l);
+
+    const function = try self.allocator.create(ast.Expression);
+    function.* = left;
+    errdefer {
+        function.deinit(self.allocator);
+        self.allocator.destroy(function);
+    }
+
+    var arguments = ArrayList(ast.Expression).init(self.allocator);
+    errdefer {
+        for (arguments.items) |*argument| {
+            argument.deinit(self.allocator);
+        }
+        arguments.deinit();
+    }
+
+    while (true) {
+        const peek = self.peek() orelse return error.SuddenEOF;
+        if (peek == .paren_r) {
+            break;
+        }
+
+        var expression = try self.parseExpression();
+        errdefer expression.deinit(self.allocator);
+
+        try arguments.append(expression);
+
+        const comma = self.peek() orelse return error.SuddenEOF;
+        if (comma != .comma) {
+            break;
+        }
+        self.advance();
+    }
+    try self.expectNext(.paren_r);
+
+    return .{ .call = .{ .function = function, .arguments = try arguments.toOwnedSlice() } };
+}
+
+pub fn callInfixFunction(self: *Parser, left: ast.Expression) !ast.Expression {
     const peek = self.peek() orelse unreachable;
     return try switch (peek) {
         .equal, .not_equal, .greater_than, .less_than, .plus, .minus, .asterisk, .slash => self.parseInfixExpression(left),
+        .paren_l => self.parseCallExpression(left),
         else => unreachable,
     };
 }
@@ -136,11 +210,12 @@ pub fn getPrecedence(token: Token) ?Precedence {
         .greater_than, .less_than => .comparison,
         .plus, .minus => .addition,
         .asterisk, .slash => .multiplication,
+        .paren_l => .call,
         else => null,
     };
 }
 
-pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) ExpressionParseError!Ast.Expression {
+pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) ExpressionParseError!ast.Expression {
     var left = try self.callPrefixFunction();
     errdefer left.deinit(self.allocator);
 
@@ -156,6 +231,6 @@ pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) Expr
     return left;
 }
 
-pub fn parseExpression(self: *Parser) !Ast.Expression {
+pub fn parseExpression(self: *Parser) !ast.Expression {
     return try self.parseExpressionPrecedence(.lowest);
 }

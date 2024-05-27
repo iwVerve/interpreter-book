@@ -5,15 +5,16 @@ const Parser = @import("parser.zig").Parser;
 
 pub fn main() !void {
     const source =
-        \\let result = -1 * true + 3 * -4;
-        \\let swap = (1 + -2) * -(-false + 4);
-        \\if (x > y) {
-        \\  return true;
+        \\let add = fn(a, b) {
+        \\  let result = a + b;
+        \\  return result;
+        \\};
+        \\let sum = if (true) {
+        \\  return add(2, 3);
         \\}
         \\else {
-        \\  return false;
-        \\}
-        \\return result;
+        \\  return add(3, 4);
+        \\};
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
