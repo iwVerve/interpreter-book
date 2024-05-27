@@ -3,7 +3,7 @@ const Allocator = std.mem.Allocator;
 
 pub const Config = @import("Config.zig");
 
-/// Owns own memory
+/// Owns own memory.
 pub const Token = union(enum) {
     identifier: []const u8,
     integer: Config.integer_type,

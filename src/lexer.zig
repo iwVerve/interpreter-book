@@ -175,6 +175,7 @@ pub const Lexer = struct {
     }
 
     /// Caller owns returned memory.
+    /// Doesn't point to but doesn't consume source.
     pub fn lex(self: *Lexer, source: []const u8) ![]Token {
         self.source = source;
         self.position = 0;
