@@ -14,6 +14,11 @@ pub fn evalBinaryExpression(self: Interpreter, expression: ast.BinaryExpression)
         .minus => try Value.subtract(left, right),
         .asterisk => try Value.multiply(left, right),
         .slash => try Value.divide(left, right),
+
+        .equal => try Value.equal(left, right),
+        .not_equal => try Value.not_equal(left, right),
+        .greater_than => try Value.greater_than(left, right),
+        .less_than => try Value.less_than(left, right),
         else => error.InvalidOperator,
     };
 }

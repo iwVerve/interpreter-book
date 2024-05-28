@@ -13,10 +13,20 @@ pub const Value = union(enum) {
     }
 
     pub fn negateBool(value: Value) !Value {
+        return .{ .bool = !isTruthy(value) };
+    }
+
+    pub fn isTruthy(value: Value) bool {
         if (value == .bool) {
-            return .{ .bool = !value.bool };
+            return value.bool;
         }
-        return error.TypeError;
+        if (value == .integer) {
+            return value.integer > 0;
+        }
+        if (value == .null) {
+            return false;
+        }
+        return true;
     }
 
     pub fn add(left: Value, right: Value) !Value {
@@ -46,5 +56,33 @@ pub const Value = union(enum) {
             return .{ .integer = result };
         }
         return error.TypeError;
+    }
+
+    pub fn equal(left: Value, right: Value) !Value {
+        if (left == .integer and right == .integer) {
+            return .{ .bool = left.integer == right.integer };
+        }
+        if (left == .bool and right == .bool) {
+            return .{ .bool = left.bool == right.bool };
+        }
+        return error.TypeError;
+    }
+
+    pub fn greater_than(left: Value, right: Value) !Value {
+        if (left == .integer and right == .integer) {
+            return .{ .bool = left.integer > right.integer };
+        }
+        return error.TypeError;
+    }
+
+    pub fn not_equal(left: Value, right: Value) !Value {
+        const is_equal = try Value.equal(left, right);
+        return Value.negateBool(is_equal) catch unreachable;
+    }
+
+    pub fn less_than(left: Value, right: Value) !Value {
+        const is_greater_than = (try Value.greater_than(left, right)).bool;
+        const is_equal = (try Value.equal(left, right)).bool;
+        return .{ .bool = !is_greater_than and !is_equal };
     }
 };
