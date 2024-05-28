@@ -6,18 +6,15 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let repeat = fn(func, times, acc) {
-        \\  if (times > 0) {
-        \\      return repeat(func, times - 1, func(acc));
-        \\  }
-        \\  return acc;
+        \\let addN = fn(add) {
+        \\  return fn(num) {
+        \\      return num + add;
+        \\  };
         \\};
         \\
-        \\let addTwo = fn(n) {
-        \\  return n + 2;
-        \\};
+        \\let addTwo = addN(2);
         \\
-        \\repeat(addTwo, 5, 0);
+        \\addTwo(3);
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

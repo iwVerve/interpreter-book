@@ -96,5 +96,5 @@ pub const Value = union(enum) {
 const Function = struct {
     parameters: []const []const u8,
     body: *ast.Statement,
-    environment: Environment,
+    environment: *Environment,
 };

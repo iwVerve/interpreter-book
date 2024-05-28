@@ -48,11 +48,10 @@ pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression, enviro
 
 pub fn evalFunctionLiteral(self: *Interpreter, function: ast.FunctionExpression, environment: *Environment) !Value {
     _ = self;
-    const function_environment = environment.extend();
     return .{ .function = .{
         .parameters = function.parameters,
         .body = function.body,
-        .environment = function_environment,
+        .environment = environment,
     } };
 }
 
