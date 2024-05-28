@@ -6,12 +6,9 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\if (true) {
-        \\  1
-        \\}
-        \\else {
-        \\  0
-        \\}
+        \\1
+        \\return 2;
+        \\3
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -32,7 +29,7 @@ pub fn main() !void {
     defer program.deinit(allocator);
 
     var interpreter = Interpreter{ .allocator = allocator };
-    const result = try interpreter.evalStatement(program);
+    const result = try interpreter.eval(program);
     defer interpreter.deinit();
 
     const stdout = std.io.getStdOut();

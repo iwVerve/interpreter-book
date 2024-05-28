@@ -5,7 +5,7 @@ const InterpreterError = InterpreterImpl.InterpreterError;
 const ast = @import("../ast.zig");
 const Value = @import("value.zig").Value;
 
-pub fn evalBinaryExpression(self: Interpreter, expression: ast.BinaryExpression) !Value {
+pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression) !Value {
     const left = try self.evalExpression(expression.left.*);
     const right = try self.evalExpression(expression.right.*);
 
@@ -23,7 +23,7 @@ pub fn evalBinaryExpression(self: Interpreter, expression: ast.BinaryExpression)
     };
 }
 
-pub fn evalUnaryExpression(self: Interpreter, expression: ast.UnaryExpression) !Value {
+pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression) !Value {
     const value = try self.evalExpression(expression.expression.*);
 
     return switch (expression.operator) {
@@ -34,7 +34,7 @@ pub fn evalUnaryExpression(self: Interpreter, expression: ast.UnaryExpression) !
     };
 }
 
-pub fn evalIfExpression(self: Interpreter, expression: ast.IfExpression) !Value {
+pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression) !Value {
     const condition = try self.evalExpression(expression.condition.*);
 
     if (Value.isTruthy(condition)) {
@@ -45,7 +45,7 @@ pub fn evalIfExpression(self: Interpreter, expression: ast.IfExpression) !Value 
     return Value.null;
 }
 
-pub fn evalExpression(self: Interpreter, expression: ast.Expression) InterpreterError!Value {
+pub fn evalExpression(self: *Interpreter, expression: ast.Expression) InterpreterError!Value {
     return switch (expression) {
         .binary => |b| try self.evalBinaryExpression(b),
         .unary => |u| try self.evalUnaryExpression(u),
