@@ -4,10 +4,11 @@ const InterpreterError = InterpreterImpl.InterpreterError;
 
 const ast = @import("../ast.zig");
 const Value = @import("value.zig").Value;
+const Environment = @import("environment.zig").Environment;
 
-pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression) !Value {
-    const left = try self.evalExpression(expression.left.*);
-    const right = try self.evalExpression(expression.right.*);
+pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression, environment: *Environment) !Value {
+    const left = try self.evalExpression(expression.left.*, environment);
+    const right = try self.evalExpression(expression.right.*, environment);
 
     return switch (expression.operator) {
         .plus => try Value.add(left, right),
@@ -23,8 +24,8 @@ pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression
     };
 }
 
-pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression) !Value {
-    const value = try self.evalExpression(expression.expression.*);
+pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression, environment: *Environment) !Value {
+    const value = try self.evalExpression(expression.expression.*, environment);
 
     return switch (expression.operator) {
         .plus => value,
@@ -34,29 +35,66 @@ pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression) 
     };
 }
 
-pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression) !Value {
-    const condition = try self.evalExpression(expression.condition.*);
+pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression, environment: *Environment) !Value {
+    const condition = try self.evalExpression(expression.condition.*, environment);
 
     if (Value.isTruthy(condition)) {
-        return try self.evalStatement(expression.then.*);
+        return try self.evalStatement(expression.then.*, environment);
     } else if (expression.else_) |else_statement| {
-        return try self.evalStatement(else_statement.*);
+        return try self.evalStatement(else_statement.*, environment);
     }
     return Value.null;
 }
 
-pub fn evalIdentifier(self: Interpreter, expression: ast.Identifier) !Value {
-    return self.root.get(expression.name) orelse error.ValueNotFound;
+pub fn evalFunctionLiteral(self: *Interpreter, function: ast.FunctionExpression, environment: *Environment) !Value {
+    _ = self;
+    const function_environment = environment.extend();
+    return .{ .function = .{
+        .parameters = function.parameters,
+        .body = function.body,
+        .environment = function_environment,
+    } };
 }
 
-pub fn evalExpression(self: *Interpreter, expression: ast.Expression) InterpreterError!Value {
+pub fn evalFunctionCall(self: *Interpreter, call: ast.CallExpression, environment: *Environment) !Value {
+    const function_value = try self.evalExpression(call.function.*, environment);
+    if (function_value != .function) {
+        return error.TypeError;
+    }
+    var function = function_value.function;
+
+    if (call.arguments.len != function.parameters.len) {
+        return error.WrongNumberOfArguments;
+    }
+
+    const call_environment = try self.allocator.create(Environment);
+    call_environment.* = function.environment.extend();
+    for (0..call.arguments.len) |i| {
+        const name = function.parameters[i];
+        const value = try self.evalExpression(call.arguments[i], environment);
+        try call_environment.set(name, value);
+    }
+
+    const result = try self.evalStatement(function.body.*, call_environment);
+    if (self.return_state == .function) {
+        self.return_state = .none;
+    }
+    return result;
+}
+
+pub fn evalIdentifier(expression: ast.Identifier, environment: Environment) !Value {
+    return environment.get(expression.name) orelse error.ValueNotFound;
+}
+
+pub fn evalExpression(self: *Interpreter, expression: ast.Expression, environment: *Environment) InterpreterError!Value {
     return switch (expression) {
-        .binary => |b| try self.evalBinaryExpression(b),
-        .unary => |u| try self.evalUnaryExpression(u),
-        .if_ => |i| try self.evalIfExpression(i),
-        .identifier => |i| try self.evalIdentifier(i),
+        .binary => |b| try self.evalBinaryExpression(b, environment),
+        .unary => |u| try self.evalUnaryExpression(u, environment),
+        .if_ => |i| try self.evalIfExpression(i, environment),
+        .function => |f| try self.evalFunctionLiteral(f, environment),
+        .call => |c| try self.evalFunctionCall(c, environment),
+        .identifier => |i| try evalIdentifier(i, environment.*),
         .bool => |b| .{ .bool = b },
         .integer => |i| .{ .integer = i },
-        else => @panic("todo"),
     };
 }

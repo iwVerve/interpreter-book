@@ -1,9 +1,12 @@
 const Config = @import("../Config.zig");
+const ast = @import("../ast.zig");
+const Environment = @import("environment.zig").Environment;
 
 pub const Value = union(enum) {
     null,
     integer: Config.integer_type,
     bool: bool,
+    function: Function,
 
     pub fn negateInteger(value: Value) !Value {
         if (value == .integer) {
@@ -88,4 +91,10 @@ pub const Value = union(enum) {
         const is_equal = (try Value.equal(left, right)).bool;
         return .{ .bool = !is_greater_than and !is_equal };
     }
+};
+
+const Function = struct {
+    parameters: []const []const u8,
+    body: *ast.Statement,
+    environment: Environment,
 };

@@ -10,6 +10,7 @@ pub const InterpreterError = error{
     InvalidOperator,
     DivisionByZero,
     ValueNotFound,
+    WrongNumberOfArguments,
 
     OutOfMemory,
 };
@@ -31,13 +32,13 @@ pub const Interpreter = struct {
     pub usingnamespace ExpressionImpl;
 
     pub fn init(allocator: Allocator) Interpreter {
-        const root = Environment.init(allocator);
+        const root = Environment.init(allocator, null);
         return .{ .allocator = allocator, .root = root };
     }
 
     pub fn eval(self: *Interpreter, program: ast.Statement) !Value {
         self.return_state = .none;
-        return try self.evalStatement(program);
+        return try self.evalStatement(program, &self.root);
     }
 
     pub fn deinit(self: *Interpreter) void {
