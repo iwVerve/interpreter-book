@@ -1,9 +1,5 @@
-pub const StatementImpl = @import("ast/statement.zig");
-pub const ExpressionImpl = @import("ast/expression.zig");
+const StatementImpl = @import("ast/statement.zig");
+pub usingnamespace StatementImpl;
 
-pub const Statement = StatementImpl.Statement;
-pub const BlockStatement = StatementImpl.BlockStatement;
-pub const LetStatement = StatementImpl.LetStatement;
-
-pub const Expression = ExpressionImpl.Expression;
-pub const Identifier = ExpressionImpl.Identifier;
+const ExpressionImpl = @import("ast/expression.zig");
+pub usingnamespace ExpressionImpl;

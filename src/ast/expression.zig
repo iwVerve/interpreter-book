@@ -17,7 +17,7 @@ pub const Expression = union(enum) {
     call: CallExpression,
     identifier: Identifier,
     integer: Config.integer_type,
-    bool_: bool,
+    bool: bool,
 
     pub fn deinit(self: *Expression, allocator: Allocator) void {
         switch (self.*) {
@@ -26,7 +26,7 @@ pub const Expression = union(enum) {
             .if_ => |*i| i.deinit(allocator),
             .function => |*f| f.deinit(allocator),
             .call => |*c| c.deinit(allocator),
-            .integer, .identifier, .bool_ => {},
+            .integer, .identifier, .bool => {},
         }
     }
 
@@ -39,7 +39,7 @@ pub const Expression = union(enum) {
             .call => |c| try c.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
-            .bool_ => |b| try writer.print("{}", .{b}),
+            .bool => |b| try writer.print("{}", .{b}),
         }
     }
 };

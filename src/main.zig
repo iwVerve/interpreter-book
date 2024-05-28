@@ -2,19 +2,11 @@ const std = @import("std");
 
 const Lexer = @import("lexer.zig").Lexer;
 const Parser = @import("parser.zig").Parser;
+const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let add = fn(a, b) {
-        \\  let result = a + b;
-        \\  return result;
-        \\};
-        \\let sum = if (true) {
-        \\  return add(2, 3);
-        \\}
-        \\else {
-        \\  return add(3, 4);
-        \\};
+        \\1 * 2 + 3 * 4
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -34,11 +26,15 @@ pub fn main() !void {
     var program = try parser.parse(tokens);
     defer program.deinit(allocator);
 
+    var interpreter = Interpreter{ .allocator = allocator };
+    const result = try interpreter.evalStatement(program);
+    defer interpreter.deinit();
+
     const stdout = std.io.getStdOut();
     const stdout_writer = stdout.writer();
     var buffered_writer = std.io.bufferedWriter(stdout_writer);
     const writer = buffered_writer.writer();
 
-    try program.write(writer);
+    try writer.print("{any}\n", .{result});
     try buffered_writer.flush();
 }

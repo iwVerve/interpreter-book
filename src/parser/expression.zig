@@ -46,7 +46,7 @@ pub fn parseBoolean(self: *Parser) !ast.Expression {
     if (token != .true and token != .false) {
         return error.ExpectedBoolean;
     }
-    return .{ .bool_ = (token == .true) };
+    return .{ .bool = (token == .true) };
 }
 
 pub fn parsePrefixExpression(self: *Parser) !ast.Expression {

@@ -1,1 +1,1 @@
-pub const integer_type = u32;
+pub const integer_type = i32;
