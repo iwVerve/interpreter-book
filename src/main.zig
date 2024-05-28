@@ -6,7 +6,7 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\1
+        \\1;
         \\return 2;
         \\3
     ;

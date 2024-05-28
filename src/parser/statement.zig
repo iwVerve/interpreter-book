@@ -47,6 +47,12 @@ pub fn parseGroupedStatements(self: *Parser) !Ast.Statement {
 
 pub fn parseExpressionStatement(self: *Parser) !Ast.Statement {
     const expression = try self.parseExpression();
+
+    const peek = self.peek();
+    if (peek != null and peek.? == .semicolon) {
+        self.advance();
+    }
+
     return .{ .expression = expression };
 }
 
