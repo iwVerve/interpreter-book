@@ -6,12 +6,12 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\!(1 * 2 + 3 * 4)
-        \\5 == 5
-        \\6 > 4
-        \\4 > 6
-        \\true != false
-        \\!!5 == true
+        \\if (true) {
+        \\  1
+        \\}
+        \\else {
+        \\  0
+        \\}
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

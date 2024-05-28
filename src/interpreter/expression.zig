@@ -34,10 +34,22 @@ pub fn evalUnaryExpression(self: Interpreter, expression: ast.UnaryExpression) !
     };
 }
 
+pub fn evalIfExpression(self: Interpreter, expression: ast.IfExpression) !Value {
+    const condition = try self.evalExpression(expression.condition.*);
+
+    if (Value.isTruthy(condition)) {
+        return try self.evalStatement(expression.then.*);
+    } else if (expression.else_) |else_statement| {
+        return try self.evalStatement(else_statement.*);
+    }
+    return Value.null;
+}
+
 pub fn evalExpression(self: Interpreter, expression: ast.Expression) InterpreterError!Value {
     return switch (expression) {
         .binary => |b| try self.evalBinaryExpression(b),
         .unary => |u| try self.evalUnaryExpression(u),
+        .if_ => |i| try self.evalIfExpression(i),
         .bool => |b| .{ .bool = b },
         .integer => |i| .{ .integer = i },
         else => @panic("todo"),
