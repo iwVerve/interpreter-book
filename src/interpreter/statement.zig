@@ -11,12 +11,18 @@ pub fn evalReturnStatement(self: *Interpreter, statement: ast.ReturnStatement) !
     return value;
 }
 
+pub fn evalLetStatement(self: *Interpreter, statement: ast.LetStatement) !Value {
+    const value = try self.evalExpression(statement.expression);
+    try self.root.set(statement.identifier.name, value);
+    return value;
+}
+
 pub fn evalStatement(self: *Interpreter, statement: ast.Statement) InterpreterError!Value {
     return switch (statement) {
         .block => |b| try self.evalStatements(b),
         .expression => |e| try self.evalExpression(e),
         .return_ => |r| try self.evalReturnStatement(r),
-        else => @panic("todo"),
+        .let => |l| try self.evalLetStatement(l),
     };
 }
 

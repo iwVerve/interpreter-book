@@ -6,9 +6,8 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\1;
-        \\return 2;
-        \\3
+        \\let n = 5;
+        \\n * n;
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -28,7 +27,7 @@ pub fn main() !void {
     var program = try parser.parse(tokens);
     defer program.deinit(allocator);
 
-    var interpreter = Interpreter{ .allocator = allocator };
+    var interpreter = Interpreter.init(allocator);
     const result = try interpreter.eval(program);
     defer interpreter.deinit();
 

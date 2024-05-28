@@ -52,6 +52,9 @@ pub const Value = union(enum) {
 
     pub fn divide(left: Value, right: Value) !Value {
         if (left == .integer and right == .integer) {
+            if (right.integer == 0) {
+                return error.DivisionByZero;
+            }
             const result = @divTrunc(left.integer, right.integer);
             return .{ .integer = result };
         }

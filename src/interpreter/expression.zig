@@ -45,11 +45,16 @@ pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression) !Value
     return Value.null;
 }
 
+pub fn evalIdentifier(self: Interpreter, expression: ast.Identifier) !Value {
+    return self.root.get(expression.name) orelse error.ValueNotFound;
+}
+
 pub fn evalExpression(self: *Interpreter, expression: ast.Expression) InterpreterError!Value {
     return switch (expression) {
         .binary => |b| try self.evalBinaryExpression(b),
         .unary => |u| try self.evalUnaryExpression(u),
         .if_ => |i| try self.evalIfExpression(i),
+        .identifier => |i| try self.evalIdentifier(i),
         .bool => |b| .{ .bool = b },
         .integer => |i| .{ .integer = i },
         else => @panic("todo"),

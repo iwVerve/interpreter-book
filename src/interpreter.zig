@@ -3,10 +3,15 @@ const Allocator = std.mem.Allocator;
 
 const ast = @import("ast.zig");
 const Value = @import("interpreter/value.zig").Value;
+const Environment = @import("interpreter/environment.zig").Environment;
 
 pub const InterpreterError = error{
     TypeError,
     InvalidOperator,
+    DivisionByZero,
+    ValueNotFound,
+
+    OutOfMemory,
 };
 
 const ReturnState = union(enum) {
@@ -15,8 +20,9 @@ const ReturnState = union(enum) {
 };
 
 pub const Interpreter = struct {
-    allocator: Allocator,
+    allocator: Allocator = undefined,
     return_state: ReturnState = undefined,
+    root: Environment = undefined,
 
     const StatementImpl = @import("interpreter/statement.zig");
     pub usingnamespace StatementImpl;
@@ -24,12 +30,17 @@ pub const Interpreter = struct {
     const ExpressionImpl = @import("interpreter/expression.zig");
     pub usingnamespace ExpressionImpl;
 
+    pub fn init(allocator: Allocator) Interpreter {
+        const root = Environment.init(allocator);
+        return .{ .allocator = allocator, .root = root };
+    }
+
     pub fn eval(self: *Interpreter, program: ast.Statement) !Value {
         self.return_state = .none;
         return try self.evalStatement(program);
     }
 
     pub fn deinit(self: *Interpreter) void {
-        _ = self;
+        self.root.deinit();
     }
 };
