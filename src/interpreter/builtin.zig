@@ -9,10 +9,18 @@ const Environment = @import("../interpreter/environment.zig").Environment;
 
 const ValueImpl = @import("value.zig");
 const Value = ValueImpl.Value;
-const Builtin = ValueImpl.Builtin;
+const AllocatedValue = ValueImpl.AllocatedValue;
+
+pub const Builtin = union(enum) {
+    len,
+    print,
+    string,
+};
 
 pub fn initializeBuiltins(environment: *Environment) !void {
     try environment.set("len", .{ .builtin = Builtin.len });
+    try environment.set("print", .{ .builtin = Builtin.print });
+    try environment.set("string", .{ .builtin = Builtin.string });
 }
 
 fn builtinLen(value: Value) !Value {
@@ -27,8 +35,38 @@ fn builtinLen(value: Value) !Value {
     return .{ .integer = length };
 }
 
-pub fn evalBuiltinCall(self: *Interpreter, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
+fn builtinPrint(self: anytype, values: []Value) !Value {
+    var first = true;
+
+    for (values) |value| {
+        if (first) {
+            first = false;
+        } else {
+            try self.writer.print(" ", .{});
+        }
+
+        try value.write(self.writer);
+    }
+
+    try self.writer.print("\n", .{});
+    return .null;
+}
+
+fn builtinString(self: anytype, value: Value) !Value {
+    const string = try value.string(self);
+    errdefer self.allocator.free(string);
+
+    const allocated_value = try AllocatedValue.alloc(self);
+    allocated_value.value.string = string;
+
+    return .{ .allocated = allocated_value };
+}
+
+pub fn evalBuiltinCall(self: anytype, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
     if (builtin == .len and call.arguments.len != 1) {
+        return error.WrongNumberOfArguments;
+    }
+    if (builtin == .string and call.arguments.len != 1) {
         return error.WrongNumberOfArguments;
     }
 
@@ -52,5 +90,7 @@ pub fn evalBuiltinCall(self: *Interpreter, builtin: Builtin, call: ast.CallExpre
 
     return switch (builtin) {
         .len => try builtinLen(arguments.items[0]),
+        .print => try builtinPrint(self, arguments.items),
+        .string => try builtinString(self, arguments.items[0]),
     };
 }

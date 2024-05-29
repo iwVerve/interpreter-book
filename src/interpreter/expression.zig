@@ -12,7 +12,7 @@ const Value = ValueImpl.Value;
 const AllocatedValue = ValueImpl.AllocatedValue;
 const Environment = @import("environment.zig").Environment;
 
-pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression, environment: *Environment) !Value {
+pub fn evalBinaryExpression(self: anytype, expression: ast.BinaryExpression, environment: *Environment) !Value {
     const left = try self.evalExpression(expression.left.*, environment);
     const right = try self.evalExpression(expression.right.*, environment);
 
@@ -30,7 +30,7 @@ pub fn evalBinaryExpression(self: *Interpreter, expression: ast.BinaryExpression
     };
 }
 
-pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression, environment: *Environment) !Value {
+pub fn evalUnaryExpression(self: anytype, expression: ast.UnaryExpression, environment: *Environment) !Value {
     const value = try self.evalExpression(expression.expression.*, environment);
 
     return switch (expression.operator) {
@@ -41,7 +41,7 @@ pub fn evalUnaryExpression(self: *Interpreter, expression: ast.UnaryExpression, 
     };
 }
 
-pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression, environment: *Environment) !Value {
+pub fn evalIfExpression(self: anytype, expression: ast.IfExpression, environment: *Environment) !Value {
     const condition = try self.evalExpression(expression.condition.*, environment);
 
     if (Value.isTruthy(condition)) {
@@ -52,7 +52,7 @@ pub fn evalIfExpression(self: *Interpreter, expression: ast.IfExpression, enviro
     return Value.null;
 }
 
-pub fn evalFunctionLiteral(self: *Interpreter, function: ast.FunctionExpression, environment: *Environment) !Value {
+pub fn evalFunctionLiteral(self: anytype, function: ast.FunctionExpression, environment: *Environment) !Value {
     _ = self;
     return .{ .function = .{
         .parameters = function.parameters,
@@ -61,7 +61,7 @@ pub fn evalFunctionLiteral(self: *Interpreter, function: ast.FunctionExpression,
     } };
 }
 
-pub fn evalFunctionCall(self: *Interpreter, call: ast.CallExpression, environment: *Environment) !Value {
+pub fn evalFunctionCall(self: anytype, call: ast.CallExpression, environment: *Environment) !Value {
     const function_value = try self.evalExpression(call.function.*, environment);
     if (function_value == .builtin) {
         return try self.evalBuiltinCall(function_value.builtin, call, environment);
@@ -102,13 +102,13 @@ pub fn evalIdentifier(expression: ast.Identifier, environment: Environment) !Val
     return environment.get(expression.name) orelse error.ValueNotFound;
 }
 
-pub fn evalStringLiteral(self: *Interpreter, string: []const u8) !Value {
+pub fn evalStringLiteral(self: anytype, string: []const u8) !Value {
     const allocated_value = try AllocatedValue.alloc(self);
     allocated_value.* = .{ .value = .{ .string = try self.allocator.dupe(u8, string) } };
     return .{ .allocated = allocated_value };
 }
 
-pub fn evalExpression(self: *Interpreter, expression: ast.Expression, environment: *Environment) InterpreterError!Value {
+pub fn evalExpression(self: anytype, expression: ast.Expression, environment: *Environment) InterpreterError!Value {
     return switch (expression) {
         .binary => |b| try self.evalBinaryExpression(b, environment),
         .unary => |u| try self.evalUnaryExpression(u, environment),

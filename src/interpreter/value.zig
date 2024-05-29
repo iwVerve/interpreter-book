@@ -1,10 +1,12 @@
 const std = @import("std");
+const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
 const Config = @import("../Config.zig");
 const ast = @import("../ast.zig");
 const Environment = @import("environment.zig").Environment;
 const Interpreter = @import("../interpreter.zig").Interpreter;
+const Builtin = @import("builtin.zig").Builtin;
 
 pub const Value = union(enum) {
     null,
@@ -38,7 +40,7 @@ pub const Value = union(enum) {
         return true;
     }
 
-    pub fn add(interpreter: *Interpreter, left: Value, right: Value) !Value {
+    pub fn add(interpreter: anytype, left: Value, right: Value) !Value {
         if (left == .integer and right == .integer) {
             return .{ .integer = left.integer + right.integer };
         }
@@ -52,10 +54,10 @@ pub const Value = union(enum) {
             @memcpy(new_string.ptr, left_string);
             @memcpy(new_string.ptr + left_string.len, right_string);
 
-            const string = try AllocatedValue.alloc(interpreter);
-            string.value.string = new_string;
+            const string_ptr = try AllocatedValue.alloc(interpreter);
+            string_ptr.value.string = new_string;
 
-            return .{ .allocated = string };
+            return .{ .allocated = string_ptr };
         }
         return error.TypeError;
     }
@@ -112,16 +114,38 @@ pub const Value = union(enum) {
         const is_equal = (try Value.equal(left, right)).bool;
         return .{ .bool = !is_greater_than and !is_equal };
     }
+
+    /// Caller owns returned memory.
+    pub fn string(self: Value, interpreter: anytype) ![]const u8 {
+        var array_list = ArrayList(u8).init(interpreter.allocator);
+        errdefer array_list.deinit();
+        const writer = array_list.writer();
+
+        try self.write(writer);
+
+        return try array_list.toOwnedSlice();
+    }
+
+    pub fn write(self: Value, writer: anytype) !void {
+        switch (self) {
+            .null => try writer.print("null", .{}),
+            .integer => |i| try writer.print("{}", .{i}),
+            .bool => |b| try writer.print("{}", .{b}),
+            .function => try writer.print("function", .{}),
+            .builtin => try writer.print("builtin function", .{}),
+            .allocated => |a| {
+                switch (a.value) {
+                    .string => |s| try writer.print("{s}", .{s}),
+                }
+            },
+        }
+    }
 };
 
 const Function = struct {
     parameters: []const []const u8,
     body: *ast.Statement,
     environment: *Environment,
-};
-
-pub const Builtin = union(enum) {
-    len,
 };
 
 pub const AllocatedValueType = union(enum) {
@@ -140,7 +164,7 @@ pub const AllocatedValue = struct {
     marked: bool = undefined,
     next: ?*AllocatedValue = undefined,
 
-    pub fn alloc(interpreter: *Interpreter) !*AllocatedValue {
+    pub fn alloc(interpreter: anytype) !*AllocatedValue {
         const allocated_value = try interpreter.allocator.create(AllocatedValue);
         interpreter.append_value(allocated_value);
 

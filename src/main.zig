@@ -6,12 +6,26 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let double = fn(str) {
-        \\  return str + str;
+        \\let factorial = fn(n) {
+        \\  if (n == 0) {
+        \\      return 1;
+        \\  }
+        \\  return n * factorial(n - 1);
         \\};
-        \\let str = "foo";
-        \\let result = double(str);
-        \\len(result);
+        \\
+        \\let format_output = fn(func, input) {
+        \\  let result = func(input);
+        \\  return string(input) + " -> " + string(result);
+        \\};
+        \\
+        \\let loop = fn(n) {
+        \\  print(format_output(factorial, n));
+        \\  if (n < 5) {
+        \\      loop(n + 1);
+        \\  }
+        \\};
+        \\
+        \\loop(1);
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -36,10 +50,9 @@ pub fn main() !void {
     var buffered_writer = std.io.bufferedWriter(stdout_writer);
     const writer = buffered_writer.writer();
 
-    var interpreter = try Interpreter.init(allocator);
-    const result = try interpreter.eval(program);
+    var interpreter = try Interpreter(@TypeOf(writer)).init(allocator, writer);
+    _ = try interpreter.eval(program);
     defer interpreter.deinit();
 
-    try writer.print("{any}\n", .{result});
     try buffered_writer.flush();
 }
