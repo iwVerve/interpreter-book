@@ -2,46 +2,42 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Config = @import("Config.zig");
-
 const ast = @import("ast.zig");
-const ValueImpl = @import("interpreter/value.zig");
-const Value = ValueImpl.Value;
-const AllocatedValue = ValueImpl.AllocatedValue;
-const Environment = @import("interpreter/environment.zig").Environment;
-
-pub const InterpreterError = error{
-    TypeError,
-    InvalidOperator,
-    DivisionByZero,
-    ValueNotFound,
-    WrongNumberOfArguments,
-
-    OutOfMemory,
-    DiskQuota,
-    FileTooBig,
-    InputOutput,
-    NoSpaceLeft,
-    DeviceBusy,
-    InvalidArgument,
-    AccessDenied,
-    BrokenPipe,
-    SystemResources,
-    OperationAborted,
-    NotOpenForWriting,
-    LockViolation,
-    WouldBlock,
-    ConnectionResetByPeer,
-    Unexpected,
-};
-
-const ReturnState = union(enum) {
-    none,
-    function,
-};
 
 pub fn Interpreter(comptime WriterType: anytype) type {
     return struct {
         const Self = @This();
+
+        const EnvironmentImpl = @import("interpreter/environment.zig").Impl(WriterType);
+        pub usingnamespace EnvironmentImpl;
+        const Environment = EnvironmentImpl.Environment;
+
+        const ValueImpl = @import("interpreter/value.zig").Impl(WriterType);
+        pub usingnamespace ValueImpl;
+        const Value = ValueImpl.Value;
+        const AllocatedValue = ValueImpl.AllocatedValue;
+
+        const StatementImpl = @import("interpreter/statement.zig").Impl(WriterType);
+        pub usingnamespace StatementImpl;
+
+        const ExpressionImpl = @import("interpreter/expression.zig").Impl(WriterType);
+        pub usingnamespace ExpressionImpl;
+
+        const BuiltinImpl = @import("interpreter/builtin.zig").Impl(WriterType);
+        pub usingnamespace BuiltinImpl;
+
+        pub const InterpreterError = error{
+            TypeError,
+            InvalidOperator,
+            DivisionByZero,
+            ValueNotFound,
+            WrongNumberOfArguments,
+        } || Allocator.Error || WriterType.Error;
+
+        const ReturnState = union(enum) {
+            none,
+            function,
+        };
 
         allocator: Allocator = undefined,
         writer: WriterType = undefined,
@@ -52,15 +48,6 @@ pub fn Interpreter(comptime WriterType: anytype) type {
         call_stack: std.ArrayList(*Environment) = undefined,
 
         first_allocated_value: ?*AllocatedValue = undefined,
-
-        const StatementImpl = @import("interpreter/statement.zig");
-        pub usingnamespace StatementImpl;
-
-        const ExpressionImpl = @import("interpreter/expression.zig");
-        pub usingnamespace ExpressionImpl;
-
-        const BuiltinImpl = @import("interpreter/builtin.zig");
-        pub const evalBuiltinCall = BuiltinImpl.evalBuiltinCall;
 
         pub fn init(allocator: Allocator, writer: WriterType) !Self {
             const root = try allocator.create(Environment);

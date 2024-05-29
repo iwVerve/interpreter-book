@@ -1,96 +1,101 @@
+const Interpreter = @import("../interpreter.zig").Interpreter;
+
 const std = @import("std");
 const ArrayList = std.ArrayList;
 
 const ast = @import("../ast.zig");
 const Config = @import("../Config.zig");
 
-const Interpreter = @import("../interpreter.zig").Interpreter;
-const Environment = @import("../interpreter/environment.zig").Environment;
+pub fn Impl(comptime WriterType: anytype) type {
+    const Self = Interpreter(WriterType);
 
-const ValueImpl = @import("value.zig");
-const Value = ValueImpl.Value;
-const AllocatedValue = ValueImpl.AllocatedValue;
+    return struct {
+        const Environment = Self.Environment;
+        const Value = Self.Value;
+        const AllocatedValue = Self.AllocatedValue;
 
-pub const Builtin = union(enum) {
-    len,
-    print,
-    string,
-};
+        pub const Builtin = union(enum) {
+            len,
+            print,
+            string,
+        };
 
-pub fn initializeBuiltins(environment: *Environment) !void {
-    try environment.set("len", .{ .builtin = Builtin.len });
-    try environment.set("print", .{ .builtin = Builtin.print });
-    try environment.set("string", .{ .builtin = Builtin.string });
-}
-
-fn builtinLen(value: Value) !Value {
-    if (value != .allocated) {
-        return error.TypeError;
-    }
-    if (value.allocated.value != .string) {
-        return error.TypeError;
-    }
-
-    const length: Config.integer_type = @intCast(value.allocated.value.string.len);
-    return .{ .integer = length };
-}
-
-fn builtinPrint(self: anytype, values: []Value) !Value {
-    var first = true;
-
-    for (values) |value| {
-        if (first) {
-            first = false;
-        } else {
-            try self.writer.print(" ", .{});
+        pub fn initializeBuiltins(environment: *Environment) !void {
+            try environment.set("len", .{ .builtin = Builtin.len });
+            try environment.set("print", .{ .builtin = Builtin.print });
+            try environment.set("string", .{ .builtin = Builtin.string });
         }
 
-        try value.write(self.writer);
-    }
+        fn builtinLen(value: Value) !Value {
+            if (value != .allocated) {
+                return error.TypeError;
+            }
+            if (value.allocated.value != .string) {
+                return error.TypeError;
+            }
 
-    try self.writer.print("\n", .{});
-    return .null;
-}
+            const length: Config.integer_type = @intCast(value.allocated.value.string.len);
+            return .{ .integer = length };
+        }
 
-fn builtinString(self: anytype, value: Value) !Value {
-    const string = try value.string(self);
-    errdefer self.allocator.free(string);
+        fn builtinPrint(self: *Self, values: []Value) !Value {
+            var first = true;
 
-    const allocated_value = try AllocatedValue.alloc(self);
-    allocated_value.value.string = string;
+            for (values) |value| {
+                if (first) {
+                    first = false;
+                } else {
+                    try self.writer.print(" ", .{});
+                }
 
-    return .{ .allocated = allocated_value };
-}
+                try value.write(self.writer);
+            }
 
-pub fn evalBuiltinCall(self: anytype, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
-    if (builtin == .len and call.arguments.len != 1) {
-        return error.WrongNumberOfArguments;
-    }
-    if (builtin == .string and call.arguments.len != 1) {
-        return error.WrongNumberOfArguments;
-    }
+            try self.writer.print("\n", .{});
+            return .null;
+        }
 
-    const call_environment = try self.allocator.create(Environment);
-    call_environment.* = environment.extend();
-    if (Config.log_gc) {
-        std.debug.print("GC alloc env: {*}\n", .{call_environment});
-    }
-    self.append_environment(call_environment);
+        fn builtinString(self: *Self, value: Value) !Value {
+            const string = try value.string(self);
+            errdefer self.allocator.free(string);
 
-    try self.call_stack.append(call_environment);
-    defer _ = self.call_stack.pop();
+            const allocated_value = try AllocatedValue.alloc(self);
+            allocated_value.value.string = string;
 
-    var arguments = ArrayList(Value).init(self.allocator);
-    defer arguments.deinit();
+            return .{ .allocated = allocated_value };
+        }
 
-    for (call.arguments) |argument| {
-        const value = try self.evalExpression(argument, environment);
-        try arguments.append(value);
-    }
+        pub fn evalBuiltinCall(self: *Self, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
+            if (builtin == .len and call.arguments.len != 1) {
+                return error.WrongNumberOfArguments;
+            }
+            if (builtin == .string and call.arguments.len != 1) {
+                return error.WrongNumberOfArguments;
+            }
 
-    return switch (builtin) {
-        .len => try builtinLen(arguments.items[0]),
-        .print => try builtinPrint(self, arguments.items),
-        .string => try builtinString(self, arguments.items[0]),
+            const call_environment = try self.allocator.create(Environment);
+            call_environment.* = environment.extend();
+            if (Config.log_gc) {
+                std.debug.print("GC alloc env: {*}\n", .{call_environment});
+            }
+            self.append_environment(call_environment);
+
+            try self.call_stack.append(call_environment);
+            defer _ = self.call_stack.pop();
+
+            var arguments = ArrayList(Value).init(self.allocator);
+            defer arguments.deinit();
+
+            for (call.arguments) |argument| {
+                const value = try self.evalExpression(argument, environment);
+                try arguments.append(value);
+            }
+
+            return switch (builtin) {
+                .len => try builtinLen(arguments.items[0]),
+                .print => try builtinPrint(self, arguments.items),
+                .string => try builtinString(self, arguments.items[0]),
+            };
+        }
     };
 }
