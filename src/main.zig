@@ -6,15 +6,27 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let addN = fn(add) {
-        \\  return fn(num) {
-        \\      return num + add;
+        \\let repeat = fn(func, times, acc) {
+        \\  if (times > 0) {
+        \\      return repeat(func, times - 1, func(acc));
+        \\  }
+        \\  return acc;
+        \\};
+        \\
+        \\let twice = fn(func) {
+        \\  return fn(n) {
+        \\      func(func(n));
         \\  };
         \\};
         \\
-        \\let addTwo = addN(2);
+        \\let addN = fn(add) {
+        \\  return fn(num) {
+        \\      return add + num;
+        \\  };
+        \\};
         \\
-        \\addTwo(3);
+        \\let addFour = twice(addN(2));
+        \\repeat(addFour, 5, 0);
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -34,7 +46,7 @@ pub fn main() !void {
     var program = try parser.parse(tokens);
     defer program.deinit(allocator);
 
-    var interpreter = Interpreter.init(allocator);
+    var interpreter = try Interpreter.init(allocator);
     const result = try interpreter.eval(program);
     defer interpreter.deinit();
 

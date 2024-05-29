@@ -38,5 +38,7 @@ pub fn evalStatements(self: *Interpreter, statements: ast.BlockStatement, enviro
         }
     }
 
+    self.gc(environment);
+
     return result;
 }

@@ -1,3 +1,7 @@
+const std = @import("std");
+
+const Config = @import("../Config.zig");
+
 const InterpreterImpl = @import("../interpreter.zig");
 const Interpreter = InterpreterImpl.Interpreter;
 const InterpreterError = InterpreterImpl.InterpreterError;
@@ -68,6 +72,12 @@ pub fn evalFunctionCall(self: *Interpreter, call: ast.CallExpression, environmen
 
     const call_environment = try self.allocator.create(Environment);
     call_environment.* = function.environment.extend();
+    if (Config.log_gc) {
+        std.debug.print("GC ALLOC env: {*}\n", .{call_environment});
+    }
+    self.append_environment(call_environment);
+    try self.call_stack.append(call_environment);
+
     for (0..call.arguments.len) |i| {
         const name = function.parameters[i];
         const value = try self.evalExpression(call.arguments[i], environment);
@@ -75,6 +85,8 @@ pub fn evalFunctionCall(self: *Interpreter, call: ast.CallExpression, environmen
     }
 
     const result = try self.evalStatement(function.body.*, call_environment);
+    _ = self.call_stack.pop();
+
     if (self.return_state == .function) {
         self.return_state = .none;
     }

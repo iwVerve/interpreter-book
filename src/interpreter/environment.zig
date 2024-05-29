@@ -2,11 +2,15 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 const Value = @import("value.zig").Value;
+const Interpreter = @import("../interpreter.zig").Interpreter;
 
 pub const Environment = struct {
     allocator: Allocator,
     hash_map: std.StringArrayHashMap(Value) = undefined,
     parent: ?*Environment,
+
+    marked: bool = undefined,
+    next: ?*Environment = null,
 
     pub fn init(allocator: Allocator, parent: ?*Environment) Environment {
         const hash_map = std.StringArrayHashMap(Value).init(allocator);
@@ -15,6 +19,7 @@ pub const Environment = struct {
 
     pub fn deinit(self: *Environment) void {
         self.hash_map.deinit();
+        self.allocator.destroy(self);
     }
 
     pub fn extend(self: *Environment) Environment {
@@ -31,5 +36,27 @@ pub const Environment = struct {
             result = self.parent.?.get(key);
         }
         return result;
+    }
+
+    pub fn unmark(self: *Environment) void {
+        self.marked = false;
+    }
+
+    pub fn mark(self: *Environment) void {
+        if (self.marked) {
+            return;
+        }
+
+        self.marked = true;
+
+        if (self.parent) |parent_ptr| {
+            parent_ptr.mark();
+        }
+
+        for (self.hash_map.values()) |value| {
+            if (value == .function) {
+                value.function.environment.mark();
+            }
+        }
     }
 };
