@@ -7,6 +7,7 @@ pub const Config = @import("Config.zig");
 pub const Token = union(enum) {
     identifier: []const u8,
     integer: Config.integer_type,
+    string: []const u8,
 
     assign,
     plus,
@@ -37,8 +38,10 @@ pub const Token = union(enum) {
     return_,
 
     pub fn deinit(self: *Token, allocator: Allocator) void {
-        if (self.* == .identifier) {
-            allocator.free(self.identifier);
+        switch (self.*) {
+            .identifier => |i| allocator.free(i),
+            .string => |s| allocator.free(s),
+            else => {},
         }
     }
 
@@ -50,6 +53,9 @@ pub const Token = union(enum) {
         if (self == .integer) {
             try writer.print("{}", .{self.integer});
             return;
+        }
+        if (self == .string) {
+            try writer.print("{s}", .{self.string});
         }
         inline for (operators) |operator| {
             if (self == operator[1]) {

@@ -69,6 +69,23 @@ pub const Lexer = struct {
         return .{ .integer = integer };
     }
 
+    fn readString(self: *Lexer) !Token {
+        self.advance();
+        const string_start = self.position;
+
+        while (self.peek()) |peek_char| {
+            if (peek_char == '"') {
+                const string_slice = self.source[string_start..self.position];
+                self.advance();
+
+                const string = try self.allocator.dupe(u8, string_slice);
+                return .{ .string = string };
+            }
+            self.advance();
+        }
+        return error.SuddenEOF;
+    }
+
     fn isOperator(char: u8) bool {
         // Construct array of all operator chars from operator array.
         const operator_chars = comptime blk: {
@@ -158,9 +175,7 @@ pub const Lexer = struct {
             return keyword;
         }
 
-        const word_ptr = try self.allocator.alloc(u8, word.len);
-        @memcpy(word_ptr, word);
-
+        const word_ptr = try self.allocator.dupe(u8, word);
         return .{ .identifier = word_ptr };
     }
 
@@ -187,6 +202,8 @@ pub const Lexer = struct {
                 self.consumeWhitespace();
             } else if (isDigit(peek_char)) {
                 try tokens.append(try self.readInteger());
+            } else if (peek_char == '"') {
+                try tokens.append(try self.readString());
             } else if (isOperator(peek_char)) {
                 try tokens.append(self.readOperator());
             } else if (isLetter(peek_char)) {

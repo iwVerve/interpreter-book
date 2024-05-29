@@ -17,6 +17,7 @@ pub const Expression = union(enum) {
     call: CallExpression,
     identifier: Identifier,
     integer: Config.integer_type,
+    string: []const u8,
     bool: bool,
 
     pub fn deinit(self: *Expression, allocator: Allocator) void {
@@ -26,7 +27,7 @@ pub const Expression = union(enum) {
             .if_ => |*i| i.deinit(allocator),
             .function => |*f| f.deinit(allocator),
             .call => |*c| c.deinit(allocator),
-            .integer, .identifier, .bool => {},
+            .integer, .identifier, .string, .bool => {},
         }
     }
 
@@ -39,6 +40,7 @@ pub const Expression = union(enum) {
             .call => |c| try c.write(writer),
             .identifier => |i| try i.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
+            .string => |s| try writer.print("{s}", .{s}),
             .bool => |b| try writer.print("{}", .{b}),
         }
     }

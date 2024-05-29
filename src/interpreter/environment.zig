@@ -54,8 +54,10 @@ pub const Environment = struct {
         }
 
         for (self.hash_map.values()) |value| {
-            if (value == .function) {
-                value.function.environment.mark();
+            switch (value) {
+                .function => |f| f.environment.mark(),
+                .allocated => |a| a.mark(),
+                else => {},
             }
         }
     }

@@ -7,9 +7,7 @@ const Ast = @import("../ast.zig");
 const ParseStatementError = error{
     SuddenEOF,
     UnexpectedToken,
-    ExpectedInteger,
     ExpectedIdentifier,
-    ExpectedBoolean,
 
     OutOfMemory,
 };
