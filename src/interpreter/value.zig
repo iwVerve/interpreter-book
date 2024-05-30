@@ -100,6 +100,14 @@ pub fn Impl(comptime WriterType: anytype) type {
                 if (left == .bool and right == .bool) {
                     return .{ .bool = left.bool == right.bool };
                 }
+                if (left == .allocated and right == .allocated) {
+                    const left_value = left.allocated.value;
+                    const right_value = right.allocated.value;
+                    if (left_value == .string and right_value == .string) {
+                        const result = std.mem.eql(u8, left_value.string, right_value.string);
+                        return .{ .bool = result };
+                    }
+                }
                 return error.TypeError;
             }
 

@@ -6,14 +6,8 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let number = 0;
-        \\
-        \\let inc = fn() {
-        \\  number = number + 1;
-        \\};
-        \\
-        \\inc(); inc(); inc();
-        \\@print(number);
+        \\@print("abc" == "abc");
+        \\@print("abc" == "abcd");
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
