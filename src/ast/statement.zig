@@ -7,6 +7,7 @@ pub const Statement = union(enum) {
     block: BlockStatement,
     let: LetStatement,
     return_: ReturnStatement,
+    while_: WhileStatement,
     expression: ast.Expression,
 
     pub fn deinit(self: *Statement, allocator: Allocator) void {
@@ -14,6 +15,7 @@ pub const Statement = union(enum) {
             .block => |*b| b.deinit(allocator),
             .let => |*l| l.deinit(allocator),
             .return_ => |*r| r.deinit(allocator),
+            .while_ => |*w| w.deinit(allocator),
             .expression => |*e| e.deinit(allocator),
         }
     }
@@ -23,6 +25,7 @@ pub const Statement = union(enum) {
             .block => |b| try b.write(writer),
             .let => |l| try l.write(writer),
             .return_ => |r| try r.write(writer),
+            .while_ => |w| try w.write(writer),
             .expression => |e| try e.write(writer, .lowest),
         }
     }
@@ -77,5 +80,23 @@ pub const ReturnStatement = struct {
         try writer.print("return ", .{});
         try self.expression.write(writer, .lowest);
         try writer.print(";", .{});
+    }
+};
+
+pub const WhileStatement = struct {
+    condition: ast.Expression,
+    body: *Statement,
+
+    pub fn deinit(self: *WhileStatement, allocator: Allocator) void {
+        self.condition.deinit(allocator);
+        self.body.deinit(allocator);
+        allocator.destroy(self.body);
+    }
+
+    pub fn write(self: WhileStatement, writer: anytype) !void {
+        try writer.print("while ", .{});
+        try self.condition.write(writer);
+        try writer.print(" ", .{});
+        try self.body.write(writer);
     }
 };

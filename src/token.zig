@@ -36,6 +36,7 @@ pub const Token = union(enum) {
     false,
     if_,
     else_,
+    while_,
     return_,
 
     pub fn deinit(self: *Token, allocator: Allocator) void {
@@ -110,5 +111,6 @@ pub const keywords = .{
     .{ "false", .false },
     .{ "if", .if_ },
     .{ "else", .else_ },
+    .{ "while", .while_ },
     .{ "return", .return_ },
 };

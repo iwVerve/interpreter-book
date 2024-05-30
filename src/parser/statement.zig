@@ -2,7 +2,7 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 
 const Parser = @import("../parser.zig").Parser;
-const Ast = @import("../ast.zig");
+const ast = @import("../ast.zig");
 
 const ParseStatementError = error{
     SuddenEOF,
@@ -12,7 +12,7 @@ const ParseStatementError = error{
     OutOfMemory,
 };
 
-pub fn parseLetStatement(self: *Parser) !Ast.Statement {
+pub fn parseLetStatement(self: *Parser) !ast.Statement {
     self.assertNext(.let);
 
     const identifier = try self.parseIdentifier();
@@ -24,7 +24,7 @@ pub fn parseLetStatement(self: *Parser) !Ast.Statement {
     return .{ .let = .{ .identifier = identifier.identifier, .expression = expression, .declare = true } };
 }
 
-pub fn maybeParseAssignStatement(self: *Parser) !Ast.Statement {
+pub fn maybeParseAssignStatement(self: *Parser) !ast.Statement {
     self.advance();
 
     const peek = self.peek();
@@ -42,7 +42,7 @@ pub fn maybeParseAssignStatement(self: *Parser) !Ast.Statement {
     return .{ .let = .{ .identifier = identifier.identifier, .expression = expression, .declare = false } };
 }
 
-pub fn parseReturnStatement(self: *Parser) !Ast.Statement {
+pub fn parseReturnStatement(self: *Parser) !ast.Statement {
     self.assertNext(.return_);
 
     const expression = try self.parseExpression();
@@ -51,7 +51,21 @@ pub fn parseReturnStatement(self: *Parser) !Ast.Statement {
     return .{ .return_ = .{ .expression = expression } };
 }
 
-pub fn parseGroupedStatements(self: *Parser) !Ast.Statement {
+pub fn parseWhileStatement(self: *Parser) !ast.Statement {
+    self.assertNext(.while_);
+
+    var condition = try self.parseExpression();
+    errdefer condition.deinit(self.allocator);
+
+    const statement = try self.allocator.create(ast.Statement);
+    errdefer self.allocator.destroy(statement);
+    statement.* = try self.parseStatement() orelse return error.UnexpectedToken;
+    errdefer statement.deinit(self.allocator);
+
+    return .{ .while_ = .{ .condition = condition, .body = statement } };
+}
+
+pub fn parseGroupedStatements(self: *Parser) !ast.Statement {
     self.assertNext(.brace_l);
 
     var statements = try self.parseStatements();
@@ -61,7 +75,7 @@ pub fn parseGroupedStatements(self: *Parser) !Ast.Statement {
     return statements;
 }
 
-pub fn parseExpressionStatement(self: *Parser) !Ast.Statement {
+pub fn parseExpressionStatement(self: *Parser) !ast.Statement {
     const expression = try self.parseExpression();
 
     const peek = self.peek();
@@ -72,21 +86,22 @@ pub fn parseExpressionStatement(self: *Parser) !Ast.Statement {
     return .{ .expression = expression };
 }
 
-pub fn parseStatement(self: *Parser) ParseStatementError!?Ast.Statement {
+pub fn parseStatement(self: *Parser) ParseStatementError!?ast.Statement {
     const token = self.peek() orelse return null;
 
     return switch (token) {
         .let => try self.parseLetStatement(),
         .identifier => try self.maybeParseAssignStatement(),
         .return_ => try self.parseReturnStatement(),
+        .while_ => try self.parseWhileStatement(),
         .brace_l => try self.parseGroupedStatements(),
         .brace_r => null,
         else => try self.parseExpressionStatement(),
     };
 }
 
-pub fn parseStatements(self: *Parser) !Ast.Statement {
-    var statements = ArrayList(Ast.Statement).init(self.allocator);
+pub fn parseStatements(self: *Parser) !ast.Statement {
+    var statements = ArrayList(ast.Statement).init(self.allocator);
     errdefer {
         for (statements.items) |*statement| {
             statement.deinit(self.allocator);

@@ -26,12 +26,26 @@ pub fn Impl(comptime WriterType: anytype) type {
             return value;
         }
 
+        pub fn evalWhileStatement(self: *Self, statement: ast.WhileStatement, environment: *Environment) !Value {
+            while (true) {
+                const condition = try self.evalExpression(statement.condition, environment);
+                if (!Value.isTruthy(condition)) {
+                    break;
+                }
+
+                _ = try self.evalStatement(statement.body.*, environment);
+            }
+
+            return .null;
+        }
+
         pub fn evalStatement(self: *Self, statement: ast.Statement, environment: *Environment) InterpreterError!Value {
             return switch (statement) {
                 .block => |b| try self.evalStatements(b, environment),
                 .expression => |e| try self.evalExpression(e, environment),
                 .return_ => |r| try self.evalReturnStatement(r, environment),
                 .let => |l| try self.evalLetStatement(l, environment),
+                .while_ => |w| try self.evalWhileStatement(w, environment),
             };
         }
 
