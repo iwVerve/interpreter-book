@@ -18,18 +18,20 @@ pub fn Impl(comptime WriterType: anytype) type {
             len,
             print,
             string,
+            char_at,
+        };
+
+        const BuiltinData = .{
+            .{ .len, "len" },
+            .{ .print, "print" },
+            .{ .string, "string" },
+            .{ .char_at, "charAt" },
         };
 
         pub fn evalBuiltin(expression: ast.Builtin) !Value {
-            const type_info = @typeInfo(Builtin);
-            const tag_type = type_info.Union.tag_type.?;
-            const tag_type_info = @typeInfo(tag_type);
-
-            const fields = tag_type_info.Enum.fields;
-            inline for (fields) |field| {
-                if (std.mem.eql(u8, expression.name, field.name)) {
-                    const result: tag_type = @enumFromInt(field.value);
-                    return .{ .builtin = result };
+            inline for (BuiltinData) |builtin| {
+                if (std.mem.eql(u8, expression.name, builtin[1])) {
+                    return .{ .builtin = builtin[0] };
                 }
             }
 
@@ -75,12 +77,43 @@ pub fn Impl(comptime WriterType: anytype) type {
             return .{ .allocated = allocated_value };
         }
 
-        pub fn evalBuiltinCall(self: *Self, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
-            if (builtin == .len and call.arguments.len != 1) {
-                return error.WrongNumberOfArguments;
+        fn builtinCharAt(self: *Self, value: Value, position_value: Value) !Value {
+            if (value != .allocated) {
+                return error.TypeError;
             }
-            if (builtin == .string and call.arguments.len != 1) {
-                return error.WrongNumberOfArguments;
+            if (value.allocated.value != .string) {
+                return error.TypeError;
+            }
+            if (position_value != .integer) {
+                return error.TypeError;
+            }
+
+            const source = value.allocated.value.string;
+            const position = position_value.integer;
+
+            if (position < 0 or position >= source.len) {
+                return .null;
+            }
+
+            const string = try self.allocator.alloc(u8, 1);
+            @memcpy(string, source.ptr + @as(usize, @intCast(position)));
+
+            const allocated_value = try AllocatedValue.alloc(self);
+            allocated_value.value.string = string;
+
+            return .{ .allocated = allocated_value };
+        }
+
+        pub fn evalBuiltinCall(self: *Self, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
+            if (call.arguments.len != 1) {
+                if (builtin == .len or builtin == .string) {
+                    return error.WrongNumberOfArguments;
+                }
+            }
+            if (call.arguments.len != 2) {
+                if (builtin == .char_at) {
+                    return error.WrongNumberOfArguments;
+                }
             }
 
             const call_environment = try self.allocator.create(Environment);
@@ -105,6 +138,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                 .len => try builtinLen(arguments.items[0]),
                 .print => try builtinPrint(self, arguments.items),
                 .string => try builtinString(self, arguments.items[0]),
+                .char_at => try builtinCharAt(self, arguments.items[0], arguments.items[1]),
             };
         }
     };
