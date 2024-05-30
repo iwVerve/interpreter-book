@@ -20,6 +20,7 @@ pub const Expression = union(enum) {
     integer: Config.integer_type,
     string: []const u8,
     bool: bool,
+    null,
 
     pub fn deinit(self: *Expression, allocator: Allocator) void {
         switch (self.*) {
@@ -28,7 +29,7 @@ pub const Expression = union(enum) {
             .if_ => |*i| i.deinit(allocator),
             .function => |*f| f.deinit(allocator),
             .call => |*c| c.deinit(allocator),
-            .integer, .identifier, .builtin, .string, .bool => {},
+            .integer, .identifier, .builtin, .string, .bool, .null => {},
         }
     }
 
@@ -44,6 +45,7 @@ pub const Expression = union(enum) {
             .integer => |i| try writer.print("{}", .{i}),
             .string => |s| try writer.print("{s}", .{s}),
             .bool => |b| try writer.print("{}", .{b}),
+            .null => try writer.print("null", .{}),
         }
     }
 };

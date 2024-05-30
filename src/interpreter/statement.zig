@@ -34,6 +34,9 @@ pub fn Impl(comptime WriterType: anytype) type {
                 }
 
                 _ = try self.evalStatement(statement.body.*, environment);
+                if (self.return_state != .none) {
+                    break;
+                }
             }
 
             return .null;

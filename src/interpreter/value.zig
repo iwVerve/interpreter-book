@@ -93,12 +93,15 @@ pub fn Impl(comptime WriterType: anytype) type {
                 return error.TypeError;
             }
 
-            pub fn equal(left: Value, right: Value) !Value {
+            pub fn equalStrict(left: Value, right: Value) !Value {
                 if (left == .integer and right == .integer) {
                     return .{ .bool = left.integer == right.integer };
                 }
                 if (left == .bool and right == .bool) {
                     return .{ .bool = left.bool == right.bool };
+                }
+                if (left == .null and right == .null) {
+                    return .{ .bool = true };
                 }
                 if (left == .allocated and right == .allocated) {
                     const left_value = left.allocated.value;
@@ -111,6 +114,10 @@ pub fn Impl(comptime WriterType: anytype) type {
                 return error.TypeError;
             }
 
+            pub fn equal(left: Value, right: Value) Value {
+                return Value.equalStrict(left, right) catch .{ .bool = false };
+            }
+
             pub fn greater_than(left: Value, right: Value) !Value {
                 if (left == .integer and right == .integer) {
                     return .{ .bool = left.integer > right.integer };
@@ -118,14 +125,14 @@ pub fn Impl(comptime WriterType: anytype) type {
                 return error.TypeError;
             }
 
-            pub fn not_equal(left: Value, right: Value) !Value {
-                const is_equal = try Value.equal(left, right);
+            pub fn not_equal(left: Value, right: Value) Value {
+                const is_equal = Value.equal(left, right);
                 return Value.negateBool(is_equal) catch unreachable;
             }
 
             pub fn less_than(left: Value, right: Value) !Value {
                 const is_greater_than = (try Value.greater_than(left, right)).bool;
-                const is_equal = (try Value.equal(left, right)).bool;
+                const is_equal = (try Value.equalStrict(left, right)).bool;
                 return .{ .bool = !is_greater_than and !is_equal };
             }
 
@@ -150,6 +157,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                     .allocated => |a| {
                         switch (a.value) {
                             .string => |s| try writer.print("{s}", .{s}),
+                            .file => try writer.print("file", .{}),
                         }
                     },
                 }
@@ -164,10 +172,12 @@ pub fn Impl(comptime WriterType: anytype) type {
 
         pub const AllocatedValueType = union(enum) {
             string: []const u8,
+            file: std.fs.File,
 
             pub fn deinit(self: *AllocatedValueType, allocator: Allocator) void {
                 switch (self.*) {
                     .string => |s| allocator.free(s),
+                    .file => |f| f.close(),
                 }
             }
         };

@@ -19,6 +19,8 @@ pub fn Impl(comptime WriterType: anytype) type {
             print,
             string,
             char_at,
+            file,
+            read_line,
         };
 
         const BuiltinData = .{
@@ -26,6 +28,8 @@ pub fn Impl(comptime WriterType: anytype) type {
             .{ .print, "print" },
             .{ .string, "string" },
             .{ .char_at, "charAt" },
+            .{ .file, "file" },
+            .{ .read_line, "readLine" },
         };
 
         pub fn evalBuiltin(expression: ast.Builtin) !Value {
@@ -104,10 +108,50 @@ pub fn Impl(comptime WriterType: anytype) type {
             return .{ .allocated = allocated_value };
         }
 
+        fn builtinFile(self: *Self, value: Value) !Value {
+            if (value != .allocated and value.allocated.value != .string) {
+                return error.TypeError;
+            }
+            const string = value.allocated.value.string;
+
+            const paths = [_][]const u8{ self.working_directory, string };
+            const full_path = try std.fs.path.join(self.allocator, &paths);
+            defer self.allocator.free(full_path);
+
+            const file = try std.fs.openFileAbsolute(full_path, .{});
+            errdefer file.close();
+
+            const allocated_value = try AllocatedValue.alloc(self);
+            errdefer allocated_value.deinit(self.allocator);
+            allocated_value.value = .{ .file = file };
+
+            return .{ .allocated = allocated_value };
+        }
+
+        fn builtinReadLine(self: *Self, value: Value) !Value {
+            if (value != .allocated and value.allocated.value != .file) {
+                return error.TypeError;
+            }
+            const file = value.allocated.value.file;
+            const reader = file.reader();
+            const line = try reader.readUntilDelimiterOrEofAlloc(self.allocator, '\n', 1024);
+            if (line == null) {
+                return .null;
+            }
+            errdefer self.allocator.free(line.?);
+
+            const string = try AllocatedValue.alloc(self);
+            errdefer string.deinit(self.allocator);
+            string.value = .{ .string = line.? };
+
+            return .{ .allocated = string };
+        }
+
         pub fn evalBuiltinCall(self: *Self, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
             if (call.arguments.len != 1) {
-                if (builtin == .len or builtin == .string) {
-                    return error.WrongNumberOfArguments;
+                switch (builtin) {
+                    .len, .string, .file, .read_line => return error.WrongNumberOfArguments,
+                    else => {},
                 }
             }
             if (call.arguments.len != 2) {
@@ -134,11 +178,14 @@ pub fn Impl(comptime WriterType: anytype) type {
                 try arguments.append(value);
             }
 
+            const args = arguments.items;
             return switch (builtin) {
-                .len => try builtinLen(arguments.items[0]),
-                .print => try builtinPrint(self, arguments.items),
-                .string => try builtinString(self, arguments.items[0]),
-                .char_at => try builtinCharAt(self, arguments.items[0], arguments.items[1]),
+                .len => try builtinLen(args[0]),
+                .print => try builtinPrint(self, args),
+                .string => try builtinString(self, args[0]),
+                .char_at => try builtinCharAt(self, args[0], args[1]),
+                .file => try builtinFile(self, args[0]),
+                .read_line => try builtinReadLine(self, args[0]),
             };
         }
     };

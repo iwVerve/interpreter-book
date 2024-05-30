@@ -32,7 +32,9 @@ pub fn Interpreter(comptime WriterType: anytype) type {
             DivisionByZero,
             ValueNotFound,
             WrongNumberOfArguments,
-        } || Allocator.Error || WriterType.Error;
+
+            StreamTooLong,
+        } || Allocator.Error || WriterType.Error || std.fs.File.OpenError || std.fs.File.ReadError;
 
         const ReturnState = union(enum) {
             none,

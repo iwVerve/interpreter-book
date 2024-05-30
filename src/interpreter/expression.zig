@@ -25,8 +25,8 @@ pub fn Impl(comptime WriterType: anytype) type {
                 .asterisk => try Value.multiply(left, right),
                 .slash => try Value.divide(left, right),
 
-                .equal => try Value.equal(left, right),
-                .not_equal => try Value.not_equal(left, right),
+                .equal => Value.equal(left, right),
+                .not_equal => Value.not_equal(left, right),
                 .greater_than => try Value.greater_than(left, right),
                 .less_than => try Value.less_than(left, right),
                 else => error.InvalidOperator,
@@ -122,6 +122,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                 .builtin => |b| try Self.evalBuiltin(b),
                 .string => |s| try evalStringLiteral(self, s),
                 .bool => |b| .{ .bool = b },
+                .null => .null,
                 .integer => |i| .{ .integer = i },
             };
         }

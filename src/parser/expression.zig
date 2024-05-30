@@ -51,6 +51,11 @@ pub fn parseBoolean(self: *Parser) !ast.Expression {
     return .{ .bool = (token == .true) };
 }
 
+pub fn parseNull(self: *Parser) !ast.Expression {
+    self.assertNext(.null);
+    return .null;
+}
+
 pub fn parsePrefixExpression(self: *Parser) !ast.Expression {
     const operator = self.next() orelse unreachable;
 
@@ -136,6 +141,7 @@ pub fn callPrefixFunction(self: *Parser) !ast.Expression {
         .integer => self.parseInteger(),
         .string => self.parseString(),
         .true, .false => self.parseBoolean(),
+        .null => self.parseNull(),
         .minus, .bang => self.parsePrefixExpression(),
         .paren_l => self.parseGroupedExpression(),
         .if_ => self.parseIfExpression(),
