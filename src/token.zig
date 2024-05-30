@@ -6,6 +6,7 @@ pub const Config = @import("Config.zig");
 /// Owns own memory.
 pub const Token = union(enum) {
     identifier: []const u8,
+    builtin: []const u8,
     integer: Config.integer_type,
     string: []const u8,
 
@@ -40,6 +41,7 @@ pub const Token = union(enum) {
     pub fn deinit(self: *Token, allocator: Allocator) void {
         switch (self.*) {
             .identifier => |i| allocator.free(i),
+            .builtin => |b| allocator.free(b),
             .string => |s| allocator.free(s),
             else => {},
         }
@@ -48,6 +50,10 @@ pub const Token = union(enum) {
     pub fn write(self: Token, writer: anytype) !void {
         if (self == .identifier) {
             try writer.print("{s}", .{self.identifier});
+            return;
+        }
+        if (self == .builtin) {
+            try writer.print("@{s}", .{self.builtin});
             return;
         }
         if (self == .integer) {

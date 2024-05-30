@@ -56,7 +56,6 @@ pub fn Interpreter(comptime WriterType: anytype) type {
                 std.debug.print("GC root: {*}\n", .{root});
             }
             root.* = Environment.init(allocator, null);
-            try BuiltinImpl.initializeBuiltins(root);
 
             var call_stack = std.ArrayList(*Environment).init(allocator);
             try call_stack.append(root);

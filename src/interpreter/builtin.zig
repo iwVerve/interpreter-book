@@ -20,10 +20,20 @@ pub fn Impl(comptime WriterType: anytype) type {
             string,
         };
 
-        pub fn initializeBuiltins(environment: *Environment) !void {
-            try environment.set("len", .{ .builtin = Builtin.len });
-            try environment.set("print", .{ .builtin = Builtin.print });
-            try environment.set("string", .{ .builtin = Builtin.string });
+        pub fn evalBuiltin(expression: ast.Builtin) !Value {
+            const type_info = @typeInfo(Builtin);
+            const tag_type = type_info.Union.tag_type.?;
+            const tag_type_info = @typeInfo(tag_type);
+
+            const fields = tag_type_info.Enum.fields;
+            inline for (fields) |field| {
+                if (std.mem.eql(u8, expression.name, field.name)) {
+                    const result: tag_type = @enumFromInt(field.value);
+                    return .{ .builtin = result };
+                }
+            }
+
+            return error.ValueNotFound;
         }
 
         fn builtinLen(value: Value) !Value {

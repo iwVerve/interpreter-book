@@ -13,6 +13,7 @@ pub fn Impl(comptime WriterType: anytype) type {
         const Value = Self.Value;
         const AllocatedValue = Self.AllocatedValue;
         const Environment = Self.Environment;
+        const Builtin = Self.Builtin;
 
         pub fn evalBinaryExpression(self: *Self, expression: ast.BinaryExpression, environment: *Environment) !Value {
             const left = try self.evalExpression(expression.left.*, environment);
@@ -118,6 +119,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                 .function => |f| try self.evalFunctionLiteral(f, environment),
                 .call => |c| try self.evalFunctionCall(c, environment),
                 .identifier => |i| try evalIdentifier(i, environment.*),
+                .builtin => |b| try Self.evalBuiltin(b),
                 .string => |s| try evalStringLiteral(self, s),
                 .bool => |b| .{ .bool = b },
                 .integer => |i| .{ .integer = i },

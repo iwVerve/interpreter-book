@@ -31,6 +31,11 @@ pub fn parseIdentifier(self: *Parser) !ast.Expression {
     return .{ .identifier = .{ .name = token.identifier } };
 }
 
+pub fn parseBuiltin(self: *Parser) !ast.Expression {
+    const token = self.next() orelse unreachable;
+    return .{ .builtin = .{ .name = token.builtin } };
+}
+
 pub fn parseInteger(self: *Parser) !ast.Expression {
     const token = self.next() orelse unreachable;
     return .{ .integer = token.integer };
@@ -127,6 +132,7 @@ pub fn callPrefixFunction(self: *Parser) !ast.Expression {
     const peek = self.peek() orelse return error.SuddenEOF;
     return switch (peek) {
         .identifier => self.parseIdentifier(),
+        .builtin => self.parseBuiltin(),
         .integer => self.parseInteger(),
         .string => self.parseString(),
         .true, .false => self.parseBoolean(),

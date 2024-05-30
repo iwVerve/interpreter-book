@@ -189,6 +189,22 @@ pub const Lexer = struct {
         return null;
     }
 
+    fn readBuiltin(self: *Lexer) !Token {
+        self.advance();
+        const word_start = self.position;
+
+        while (self.peek()) |peek_char| {
+            if (!isDigit(peek_char) and !isLetter(peek_char)) {
+                break;
+            }
+            self.advance();
+        }
+
+        const word = self.source[word_start..self.position];
+        const word_ptr = try self.allocator.dupe(u8, word);
+        return .{ .builtin = word_ptr };
+    }
+
     /// Caller owns returned memory.
     /// Doesn't point to but doesn't consume source.
     pub fn lex(self: *Lexer, source: []const u8) ![]Token {
@@ -208,6 +224,8 @@ pub const Lexer = struct {
                 try tokens.append(self.readOperator());
             } else if (isLetter(peek_char)) {
                 try tokens.append(try self.readWord());
+            } else if (peek_char == '@') {
+                try tokens.append(try self.readBuiltin());
             } else {
                 return error.UnknownCharacter;
             }

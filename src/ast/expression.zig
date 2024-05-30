@@ -16,6 +16,7 @@ pub const Expression = union(enum) {
     function: FunctionExpression,
     call: CallExpression,
     identifier: Identifier,
+    builtin: Builtin,
     integer: Config.integer_type,
     string: []const u8,
     bool: bool,
@@ -27,7 +28,7 @@ pub const Expression = union(enum) {
             .if_ => |*i| i.deinit(allocator),
             .function => |*f| f.deinit(allocator),
             .call => |*c| c.deinit(allocator),
-            .integer, .identifier, .string, .bool => {},
+            .integer, .identifier, .builtin, .string, .bool => {},
         }
     }
 
@@ -39,6 +40,7 @@ pub const Expression = union(enum) {
             .function => |f| try f.write(writer),
             .call => |c| try c.write(writer),
             .identifier => |i| try i.write(writer),
+            .builtin => |b| try b.write(writer),
             .integer => |i| try writer.print("{}", .{i}),
             .string => |s| try writer.print("{s}", .{s}),
             .bool => |b| try writer.print("{}", .{b}),
@@ -179,5 +181,13 @@ pub const Identifier = struct {
 
     pub fn write(self: Identifier, writer: anytype) !void {
         try writer.print("{s}", .{self.name});
+    }
+};
+
+pub const Builtin = struct {
+    name: []const u8,
+
+    pub fn write(self: Identifier, writer: anytype) !void {
+        try writer.print("@{s}", .{self.name});
     }
 };

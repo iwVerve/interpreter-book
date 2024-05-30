@@ -15,11 +15,11 @@ pub fn main() !void {
         \\
         \\let format_output = fn(func, input) {
         \\  let result = func(input);
-        \\  return string(input) + " -> " + string(result);
+        \\  return @string(input) + " -> " + @string(result);
         \\};
         \\
         \\let loop = fn(n) {
-        \\  print(format_output(factorial, n));
+        \\  @print(format_output(factorial, n));
         \\  if (n < 5) {
         \\      loop(n + 1);
         \\  }
