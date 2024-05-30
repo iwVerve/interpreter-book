@@ -6,26 +6,14 @@ const Interpreter = @import("interpreter.zig").Interpreter;
 
 pub fn main() !void {
     const source =
-        \\let factorial = fn(n) {
-        \\  if (n == 0) {
-        \\      return 1;
-        \\  }
-        \\  return n * factorial(n - 1);
+        \\let number = 0;
+        \\
+        \\let inc = fn() {
+        \\  number = number + 1;
         \\};
         \\
-        \\let format_output = fn(func, input) {
-        \\  let result = func(input);
-        \\  return @string(input) + " -> " + @string(result);
-        \\};
-        \\
-        \\let loop = fn(n) {
-        \\  @print(format_output(factorial, n));
-        \\  if (n < 5) {
-        \\      loop(n + 1);
-        \\  }
-        \\};
-        \\
-        \\loop(1);
+        \\inc(); inc(); inc();
+        \\@print(number);
     ;
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

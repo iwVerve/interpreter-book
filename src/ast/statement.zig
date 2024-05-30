@@ -51,6 +51,7 @@ pub const BlockStatement = struct {
 pub const LetStatement = struct {
     identifier: ast.Identifier,
     expression: ast.Expression,
+    declare: bool,
 
     pub fn deinit(self: *LetStatement, allocator: Allocator) void {
         self.expression.deinit(allocator);

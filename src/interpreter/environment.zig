@@ -35,6 +35,16 @@ pub fn Impl(comptime WriterType: anytype) type {
                 try self.hash_map.put(key, value);
             }
 
+            pub fn update(self: *Environment, key: []const u8, value: Value) !void {
+                if (self.hash_map.contains(key)) {
+                    try self.hash_map.put(key, value);
+                    return;
+                }
+                if (self.parent != null) {
+                    try self.parent.?.update(key, value);
+                }
+            }
+
             pub fn get(self: Environment, key: []const u8) ?Value {
                 var result = self.hash_map.get(key);
                 if (result == null and self.parent != null) {

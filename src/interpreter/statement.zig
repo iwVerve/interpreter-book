@@ -18,7 +18,11 @@ pub fn Impl(comptime WriterType: anytype) type {
 
         pub fn evalLetStatement(self: *Self, statement: ast.LetStatement, environment: *Environment) !Value {
             const value = try self.evalExpression(statement.expression, environment);
-            try environment.set(statement.identifier.name, value);
+            if (statement.declare) {
+                try environment.set(statement.identifier.name, value);
+            } else {
+                try environment.update(statement.identifier.name, value);
+            }
             return value;
         }
 

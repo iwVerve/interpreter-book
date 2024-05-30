@@ -21,7 +21,25 @@ pub fn parseLetStatement(self: *Parser) !Ast.Statement {
     errdefer expression.deinit(self.allocator);
     try self.expectNext(.semicolon);
 
-    return .{ .let = .{ .identifier = identifier.identifier, .expression = expression } };
+    return .{ .let = .{ .identifier = identifier.identifier, .expression = expression, .declare = true } };
+}
+
+pub fn maybeParseAssignStatement(self: *Parser) !Ast.Statement {
+    self.advance();
+
+    const peek = self.peek();
+    self.position -= 1;
+    if (peek == null or peek.? != .assign) {
+        return try self.parseExpressionStatement();
+    }
+
+    const identifier = try self.parseIdentifier();
+    self.assertNext(.assign);
+    var expression = try self.parseExpression();
+    errdefer expression.deinit(self.allocator);
+    try self.expectNext(.semicolon);
+
+    return .{ .let = .{ .identifier = identifier.identifier, .expression = expression, .declare = false } };
 }
 
 pub fn parseReturnStatement(self: *Parser) !Ast.Statement {
@@ -59,6 +77,7 @@ pub fn parseStatement(self: *Parser) ParseStatementError!?Ast.Statement {
 
     return switch (token) {
         .let => try self.parseLetStatement(),
+        .identifier => try self.maybeParseAssignStatement(),
         .return_ => try self.parseReturnStatement(),
         .brace_l => try self.parseGroupedStatements(),
         .brace_r => null,
