@@ -39,17 +39,18 @@ pub fn Interpreter(comptime WriterType: anytype) type {
             function,
         };
 
-        allocator: Allocator = undefined,
-        writer: WriterType = undefined,
-        return_state: ReturnState = undefined,
+        allocator: Allocator,
+        writer: WriterType,
+        working_directory: []const u8,
+        return_state: ReturnState = .none,
 
-        root: *Environment = undefined,
-        first_environment: ?*Environment = undefined,
-        call_stack: std.ArrayList(*Environment) = undefined,
+        root: *Environment,
+        first_environment: ?*Environment,
+        call_stack: std.ArrayList(*Environment),
 
-        first_allocated_value: ?*AllocatedValue = undefined,
+        first_allocated_value: ?*AllocatedValue = null,
 
-        pub fn init(allocator: Allocator, writer: WriterType) !Self {
+        pub fn init(allocator: Allocator, writer: WriterType, working_directory: []const u8) !Self {
             const root = try allocator.create(Environment);
             errdefer allocator.destroy(root);
             if (Config.log_gc) {
@@ -62,6 +63,7 @@ pub fn Interpreter(comptime WriterType: anytype) type {
             return .{
                 .allocator = allocator,
                 .writer = writer,
+                .working_directory = working_directory,
                 .root = root,
                 .first_environment = root,
                 .call_stack = call_stack,
