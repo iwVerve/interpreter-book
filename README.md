@@ -9,4 +9,3 @@ zig build run -- [path]
 
 ### Todo:
 - Memory leaks on interpreter errors.
-- Don't collect garbage literally always.

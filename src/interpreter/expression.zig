@@ -80,6 +80,7 @@ pub fn Impl(comptime WriterType: anytype) type {
 
             const call_environment = try self.allocator.create(Environment);
             call_environment.* = function.environment.extend();
+            self.allocations_since_gc += 1;
             if (Config.log_gc) {
                 std.debug.print("GC alloc env: {*}\n", .{call_environment});
             }

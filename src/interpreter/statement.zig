@@ -1,4 +1,5 @@
 const Interpreter = @import("../interpreter.zig").Interpreter;
+const Config = @import("../Config.zig");
 
 const ast = @import("../ast.zig");
 
@@ -63,7 +64,9 @@ pub fn Impl(comptime WriterType: anytype) type {
                 }
             }
 
-            self.gc(environment, &result);
+            if (self.allocations_since_gc >= Config.allocation_threshold) {
+                self.gc(environment, &result);
+            }
 
             return result;
         }

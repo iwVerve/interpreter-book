@@ -51,6 +51,7 @@ pub fn Interpreter(comptime WriterType: anytype) type {
         call_stack: std.ArrayList(*Environment),
 
         first_allocated_value: ?*AllocatedValue = null,
+        allocations_since_gc: u32 = 0,
 
         pub fn init(allocator: Allocator, writer: WriterType, working_directory: []const u8) !Self {
             const root = try allocator.create(Environment);
@@ -172,6 +173,7 @@ pub fn Interpreter(comptime WriterType: anytype) type {
                 value = next;
             }
 
+            self.allocations_since_gc = 0;
             if (Config.log_gc) {
                 std.debug.print("GC end\n", .{});
             }

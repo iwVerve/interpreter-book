@@ -192,6 +192,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                 const allocated_value = try interpreter.allocator.create(AllocatedValue);
                 interpreter.append_value(allocated_value);
 
+                interpreter.allocations_since_gc += 1;
                 if (Config.log_gc) {
                     std.debug.print("GC alloc val: {*}\n", .{allocated_value});
                 }
