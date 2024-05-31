@@ -232,7 +232,7 @@ pub fn parseExpressionPrecedence(self: *Parser, min_precedence: Precedence) Expr
     while (true) {
         const peek_token = self.peek() orelse break;
         const peek_precedence = getPrecedence(peek_token) orelse break;
-        if (@intFromEnum(peek_precedence) < @intFromEnum(min_precedence)) {
+        if (@intFromEnum(peek_precedence) <= @intFromEnum(min_precedence)) {
             break;
         }
         left = try self.callInfixFunction(left);

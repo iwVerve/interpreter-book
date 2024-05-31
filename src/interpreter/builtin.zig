@@ -21,6 +21,8 @@ pub fn Impl(comptime WriterType: anytype) type {
             char_at,
             file,
             read_line,
+            char,
+            ord,
         };
 
         const BuiltinData = .{
@@ -30,6 +32,8 @@ pub fn Impl(comptime WriterType: anytype) type {
             .{ .char_at, "charAt" },
             .{ .file, "file" },
             .{ .read_line, "readLine" },
+            .{ .char, "char" },
+            .{ .ord, "ord" },
         };
 
         pub fn evalBuiltin(expression: ast.Builtin) !Value {
@@ -103,13 +107,13 @@ pub fn Impl(comptime WriterType: anytype) type {
             @memcpy(string, source.ptr + @as(usize, @intCast(position)));
 
             const allocated_value = try AllocatedValue.alloc(self);
-            allocated_value.value.string = string;
+            allocated_value.value = .{ .string = string };
 
             return .{ .allocated = allocated_value };
         }
 
         fn builtinFile(self: *Self, value: Value) !Value {
-            if (value != .allocated and value.allocated.value != .string) {
+            if (value != .allocated or value.allocated.value != .string) {
                 return error.TypeError;
             }
             const string = value.allocated.value.string;
@@ -129,7 +133,7 @@ pub fn Impl(comptime WriterType: anytype) type {
         }
 
         fn builtinReadLine(self: *Self, value: Value) !Value {
-            if (value != .allocated and value.allocated.value != .file) {
+            if (value != .allocated or value.allocated.value != .file) {
                 return error.TypeError;
             }
             const file = value.allocated.value.file;
@@ -147,10 +151,39 @@ pub fn Impl(comptime WriterType: anytype) type {
             return .{ .allocated = string };
         }
 
+        fn builtinChar(self: *Self, value: Value) !Value {
+            if (value != .integer) {
+                return error.TypeError;
+            }
+
+            const string = try self.allocator.alloc(u8, 1);
+            errdefer self.allocator.free(string);
+            string[0] = @intCast(value.integer);
+
+            const allocated_value = try AllocatedValue.alloc(self);
+            errdefer allocated_value.deinit(self.allocator);
+            allocated_value.value = .{ .string = string };
+
+            return .{ .allocated = allocated_value };
+        }
+
+        fn builtinOrd(self: *Self, value: Value) !Value {
+            _ = self;
+            if (value != .allocated or value.allocated.value != .string) {
+                return error.TypeError;
+            }
+            const string = value.allocated.value.string;
+            if (string.len != 1) {
+                return error.TypeError;
+            }
+
+            return .{ .integer = string[0] };
+        }
+
         pub fn evalBuiltinCall(self: *Self, builtin: Builtin, call: ast.CallExpression, environment: *Environment) !Value {
             if (call.arguments.len != 1) {
                 switch (builtin) {
-                    .len, .string, .file, .read_line => return error.WrongNumberOfArguments,
+                    .len, .string, .file, .read_line, .char, .ord => return error.WrongNumberOfArguments,
                     else => {},
                 }
             }
@@ -186,6 +219,8 @@ pub fn Impl(comptime WriterType: anytype) type {
                 .char_at => try builtinCharAt(self, args[0], args[1]),
                 .file => try builtinFile(self, args[0]),
                 .read_line => try builtinReadLine(self, args[0]),
+                .char => try builtinChar(self, args[0]),
+                .ord => try builtinOrd(self, args[0]),
             };
         }
     };
