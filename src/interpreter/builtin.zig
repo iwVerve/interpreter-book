@@ -80,7 +80,7 @@ pub fn Impl(comptime WriterType: anytype) type {
             errdefer self.allocator.free(string);
 
             const allocated_value = try AllocatedValue.alloc(self);
-            allocated_value.value.string = string;
+            allocated_value.value = .{ .string = string };
 
             return .{ .allocated = allocated_value };
         }

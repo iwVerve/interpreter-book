@@ -49,8 +49,8 @@ pub fn main() !void {
     const writer = buffered_writer.writer();
 
     var interpreter = try Interpreter(@TypeOf(writer)).init(allocator, writer, working_directory);
-    _ = try interpreter.eval(program);
     defer interpreter.deinit();
+    _ = try interpreter.eval(program);
 
     try buffered_writer.flush();
 }

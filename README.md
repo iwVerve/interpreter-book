@@ -8,4 +8,4 @@ zig build run -- [path]
 ```
 
 ### Todo:
-- Memory leaks on interpreter errors.
+- Error reporting.

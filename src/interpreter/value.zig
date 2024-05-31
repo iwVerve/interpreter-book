@@ -61,7 +61,7 @@ pub fn Impl(comptime WriterType: anytype) type {
                     @memcpy(new_string.ptr + left_string.len, right_string);
 
                     const string_ptr = try AllocatedValue.alloc(interpreter);
-                    string_ptr.value.string = new_string;
+                    string_ptr.value = .{ .string = new_string };
 
                     return .{ .allocated = string_ptr };
                 }
